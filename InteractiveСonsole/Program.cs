@@ -84,7 +84,7 @@ void NameVerification(string massege, string? name)
 namespace InteractiveСonsole
 {
     /// <summary>
-    /// Это класс, который в котором хранятся готовые команды
+    /// Это класс, который в котором хранятся готовые команды.
     /// </summary>
     public static class Commands
     {
