@@ -2,6 +2,8 @@
 
 string? name = null;
 
+List<string> task = new List<string>();
+
 
 Console.WriteLine("Привет!\nВведи следующие команды\n/start, /help, /info, /exit.\n");
 while (true)
@@ -58,6 +60,17 @@ bool Returne(string? text)
                 NameVerification($"Вы ввели: {message}", name);
                 return false;
             }
+        case "/addtask":
+            if (string.IsNullOrWhiteSpace(name)) //Если пользователь всё таки ввёл данную команду то идём по сценарию, что команда не распознана
+            {
+                Console.WriteLine("Команда не распознана\n");
+                return false;
+            }
+            else
+            {
+                TaskAdd();
+                return false;
+            }
         default: //если команды не распозднаны то выводим сообщение
             Console.WriteLine("Команда не распознана\n");
             return false;
@@ -81,6 +94,25 @@ void NameVerification(string massege, string? name)
     }
 }
 
+/// <summary>
+/// Метод добавление задачи
+/// </summary>
+void TaskAdd()
+{
+    Console.WriteLine("Введите описание задачи\n");
+    string? input = Console.ReadLine();
+
+    // Проверка на null или пустую строку
+    if (string.IsNullOrWhiteSpace(input))
+    {
+        Console.WriteLine("Вы не ввели задачу\n");
+    }
+
+    task.Add(input); // Добавление элемента в список
+    Console.WriteLine("Задача успешно добавлена\n");
+
+}
+
 namespace InteractiveСonsole
 {
     /// <summary>
@@ -89,10 +121,13 @@ namespace InteractiveСonsole
     public static class Commands
     {
         public static string Help { get; set; } = "Просто вводи команды\n/start, /help, /info, /exit.\nЕсли авторизовался, то вводи команду /echo\nУдачи!!!!!";
-        public static string Info { get; set; } = "Версия: 1\nДата создания: 14.11.2025";
+        public static string Info { get; set; } = "Версия: 2\nДата создания: 14.11.2025\nДата обновления: 04.12.2025";
         public static string StartGud { get; set; } = "Ты уже авторизованы";
 
     }
 
 
 }
+
+
+
