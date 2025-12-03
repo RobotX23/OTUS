@@ -1,4 +1,5 @@
 ﻿using InteractiveСonsole;
+using System.Threading.Tasks;
 
 string? name = null;
 
@@ -27,7 +28,7 @@ bool Returne(string? text)
             {
                 Console.WriteLine("Введите имя!\n");
                 name = Console.ReadLine();
-                Console.WriteLine("Теперь ты авторизован. Удачи. Пиши /echo\n");
+                Console.WriteLine($"Теперь ты авторизован {name}. Чем могу помочь?\n");
             }
             else
             {
@@ -43,55 +44,57 @@ bool Returne(string? text)
         case "/exit":
             return true; //Обработка команды exid
         case string command when command.StartsWith("/echo"):
-            if (string.IsNullOrWhiteSpace(name)) //Если пользователь всё таки ввёл данную команду то идём по сценарию, что команда не распознана
-            {
-                Console.WriteLine("Команда не распознана\n");
-                return false;
-            }
-            else
-            {
-                if (command.Length == 5 || command[5] != ' ') //Проверка что сообщение введено корректно. Сообщение есть и оно указано через пробел после команды
-                {
-                    NameVerification("Пожалуйста, введите сообщение после команды /echo через пробел.\n", name);
-                    return false; 
-                }
-                string[] parts = command.Split(' ', 2); //Разделение строки по пробелу после команды
-                string message = parts[1].Trim(); //Используем только вторую часть команды
-                NameVerification($"Вы ввели: {message}", name);
-                return false;
-            }
+            return NotName(Echo, command);
         case "/addtask":
-            if (string.IsNullOrWhiteSpace(name)) //Если пользователь всё таки ввёл данную команду то идём по сценарию, что команда не распознана
-            {
-                Console.WriteLine("Команда не распознана\n");
-                return false;
-            }
-            else
-            {
-                TaskAdd();
-                return false;
-            }
+            return NotName(TaskAdd, "");
         case "/showtasks":
-            if (string.IsNullOrWhiteSpace(name)) //Если пользователь всё таки ввёл данную команду то идём по сценарию, что команда не распознана
-            {
-                Console.WriteLine("Команда не распознана\n");
-                return false;
-            }
-            else
-            {
-                TaskShow();
-                return false;
-            }
+            return NotName(TaskShow, "");
+        case "/remowetask":
+            return NotName(TaskRemove, "");
         default: //если команды не распозднаны то выводим сообщение
             Console.WriteLine("Команда не распознана\n");
             return false;
     }
 }
 
+void Echo(string command)
+{
+    if (command.Length == 5 || command[5] != ' ') //Проверка что сообщение введено корректно. Сообщение есть и оно указано через пробел после команды
+    {
+        NameVerification("Пожалуйста, введите сообщение после команды /echo через пробел.\n", name);
+    }
+    string[] parts = command.Split(' ', 2); //Разделение строки по пробелу после команды
+    if (parts.Length == 1)
+    {
+        NameVerification("Пожалуйста, введите сообщение после команды /echo через пробел.\n", name);
+    }
+    else
+    {
+        string message = parts[1].Trim(); //Используем только вторую часть команды
+        NameVerification($"Вы ввели: {message}", name);
+    }
+}
+
+
+bool NotName(Action<string> taskAction, string text)
+{
+    if (string.IsNullOrWhiteSpace(name))
+    {
+        Console.WriteLine("Команда не распознана\n");
+        return false;
+    }
+    else
+    {
+        taskAction(text); // Вызов переданного метода
+        return false;
+    }
+}
+
+
+
 /// <summary>
 /// Метод который определяет авторизован пользователь и выводит преведственное сообщение
 /// </summary>
-
 void NameVerification(string massege, string? name)
 {
     if (!string.IsNullOrWhiteSpace(name))
@@ -108,9 +111,9 @@ void NameVerification(string massege, string? name)
 /// <summary>
 /// Метод добавление задачи
 /// </summary>
-void TaskAdd()
+void TaskAdd(string lol)
 {
-    Console.WriteLine("Введите описание задачи\n");
+    Console.WriteLine("Введите описание задачи:");
     string? input = Console.ReadLine();
 
     // Проверка на null или пустую строку
@@ -121,15 +124,39 @@ void TaskAdd()
     else
     {
         task.Add(input); // Добавление элемента в список
-        Console.WriteLine("Задача успешно добавлена\n");
+        Console.WriteLine($"Задача \"{input}\" успешно добавлена\n");
     }
 
 }
 
+
 /// <summary>
 /// Метод проверки задач
 /// </summary>
-void TaskShow()
+void TaskShow(string lol)
+{
+
+    if (task.Count == 0)
+    {
+        Console.WriteLine("Список задач пуст\n");
+    }
+    else
+    {
+        int i = 0;
+        Console.WriteLine("Ваш список задач:\n");
+        foreach (var tasks in task)
+        {
+            i++;
+            Console.WriteLine($"Задача {i}:{tasks}");
+        }
+        Console.WriteLine("\n");
+    }
+}
+
+/// <summary>
+/// Метод удаления задач
+/// </summary>
+void TaskRemove(string lol)
 {
 
     if (task.Count == 0)
@@ -144,6 +171,40 @@ void TaskShow()
             i++;
             Console.WriteLine($"Задача {i}:{tasks}");
         }
+        Console.WriteLine("Какую задачу удалить? Введите номер задачи\n");
+
+        string? input = Console.ReadLine();
+
+        // Проверка на null или пустую строку
+        if (string.IsNullOrWhiteSpace(input))
+        {
+            Console.WriteLine("Вы не ввели задачу\n");
+        }
+        else
+        {
+
+            int number;
+
+            // Используем TryParse для проверки, является ли ввод числом
+            if (int.TryParse(input, out number))
+            {
+                if (number >=1 && number <= task.Count)
+                {
+                    string taska = task[number-1];
+                    task.RemoveAt(number-1);
+                    Console.WriteLine($"Задача \"{taska}\" успешно удалена.\n");
+                }
+                else
+                {
+                    Console.WriteLine("Ошибка: введено не корректнок число.\n");
+                }
+            }
+            else
+            {
+                Console.WriteLine("Ошибка: введено не число.\n");
+            }
+        }
+
     }
 }
 
@@ -154,7 +215,7 @@ namespace InteractiveСonsole
     /// </summary>
     public static class Commands
     {
-        public static string Help { get; set; } = "Просто вводи команды\n/start, /help, /info, /exit.\nЕсли авторизовался, то вводи команду /echo\nУдачи!!!!!";
+        public static string Help { get; set; } = "Просто вводи команды\n/start, /help, /info, /exit.\nЕсли авторизовался, то вводи команду /echo, /addtask, /showtasks, /remowetask\nУдачи!!!!!";
         public static string Info { get; set; } = "Версия: 2\nДата создания: 14.11.2025\nДата обновления: 04.12.2025";
         public static string StartGud { get; set; } = "Ты уже авторизованы";
 
