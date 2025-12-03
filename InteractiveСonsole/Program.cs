@@ -71,6 +71,17 @@ bool Returne(string? text)
                 TaskAdd();
                 return false;
             }
+        case "/showtasks":
+            if (string.IsNullOrWhiteSpace(name)) //Если пользователь всё таки ввёл данную команду то идём по сценарию, что команда не распознана
+            {
+                Console.WriteLine("Команда не распознана\n");
+                return false;
+            }
+            else
+            {
+                TaskShow();
+                return false;
+            }
         default: //если команды не распозднаны то выводим сообщение
             Console.WriteLine("Команда не распознана\n");
             return false;
@@ -107,10 +118,33 @@ void TaskAdd()
     {
         Console.WriteLine("Вы не ввели задачу\n");
     }
+    else
+    {
+        task.Add(input); // Добавление элемента в список
+        Console.WriteLine("Задача успешно добавлена\n");
+    }
 
-    task.Add(input); // Добавление элемента в список
-    Console.WriteLine("Задача успешно добавлена\n");
+}
 
+/// <summary>
+/// Метод проверки задач
+/// </summary>
+void TaskShow()
+{
+
+    if (task.Count == 0)
+    {
+        Console.WriteLine("Список задач пуст\n");
+    }
+    else
+    {
+        int i = 0;
+        foreach (var tasks in task)
+        {
+            i++;
+            Console.WriteLine($"Задача {i}:{tasks}");
+        }
+    }
 }
 
 namespace InteractiveСonsole
