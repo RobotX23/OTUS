@@ -142,12 +142,11 @@ void TaskShow(string lol)
     }
     else
     {
-        int i = 0;
+        int i = 1;
         Console.WriteLine("Ваш список задач:\n");
         foreach (var tasks in task)
         {
-            i++;
-            Console.WriteLine($"Задача {i}:{tasks}");
+            Console.WriteLine($"Задача {i++}:{tasks}");
         }
         Console.WriteLine("\n");
     }
@@ -165,11 +164,10 @@ void TaskRemove(string lol)
     }
     else
     {
-        int i = 0;
+        int i = 1;
         foreach (var tasks in task)
         {
-            i++;
-            Console.WriteLine($"Задача {i}:{tasks}");
+            Console.WriteLine($"Задача {i++}:{tasks}");
         }
         Console.WriteLine("Какую задачу удалить? Введите номер задачи\n");
 
