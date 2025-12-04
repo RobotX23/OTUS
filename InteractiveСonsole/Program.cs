@@ -59,10 +59,6 @@ bool Returne(string? text)
 
 void Echo(string command)
 {
-    if (command.Length == 5 || command[5] != ' ') //Проверка что сообщение введено корректно. Сообщение есть и оно указано через пробел после команды
-    {
-        NameVerification("Пожалуйста, введите сообщение после команды /echo через пробел.\n", name);
-    }
     string[] parts = command.Split(' ', 2); //Разделение строки по пробелу после команды
     if (parts.Length == 1)
     {
