@@ -165,35 +165,27 @@ bool TaskRemove(string lol)
 
         string? input = Console.ReadLine();
 
-        // Проверка на null или пустую строку
-        if (string.IsNullOrWhiteSpace(input))
-        {
-            Console.WriteLine("Вы не ввели задачу\n");
-        }
-        else
-        {
+        int number;
 
-            int number;
-
-            // Используем TryParse для проверки, является ли ввод числом
-            if (int.TryParse(input, out number))
+        // Используем TryParse для проверки, является ли ввод числом
+        if (int.TryParse(input, out number))
+        {
+            if (number >= 1 && number <= task.Count)
             {
-                if (number >= 1 && number <= task.Count)
-                {
-                    string taska = task[number - 1];
-                    task.RemoveAt(number - 1);
-                    Console.WriteLine($"Задача \"{taska}\" успешно удалена.\n");
-                }
-                else
-                {
-                    Console.WriteLine("Ошибка: введено не корректнок число.\n");
-                }
+                string taska = task[number - 1];
+                task.RemoveAt(number - 1);
+                Console.WriteLine($"Задача \"{taska}\" успешно удалена.\n");
             }
             else
             {
-                Console.WriteLine("Ошибка: введено не число.\n");
+                Console.WriteLine("Ошибка: введено не корректнок число.\n");
             }
         }
+        else
+        {
+            Console.WriteLine("Ошибка: введено не число.\n");
+        }
+        
         return true;
     }
     else
