@@ -57,22 +57,24 @@ bool Returne(string? text)
     }
 }
 
-void Echo(string command)
+bool Echo(string command)
 {
     string[] parts = command.Split(' ', 2); //Разделение строки по пробелу после команды
     if (parts.Length == 1)
     {
         NameVerification("Пожалуйста, введите сообщение после команды /echo через пробел.\n", name);
+        return false;
     }
     else
     {
         string message = parts[1].Trim(); //Используем только вторую часть команды
         NameVerification($"Вы ввели: {message}", name);
+        return true;
     }
 }
 
 
-bool NotName(Action<string> taskAction, string text)
+bool NotName(Func<string, bool> taskAction, string text)
 {
     if (string.IsNullOrWhiteSpace(name))
     {
@@ -107,7 +109,7 @@ void NameVerification(string massege, string? name)
 /// <summary>
 /// Метод добавление задачи
 /// </summary>
-void TaskAdd(string lol)
+bool TaskAdd(string lol)
 {
     Console.WriteLine("Введите описание задачи:");
     string? input = Console.ReadLine();
@@ -116,11 +118,13 @@ void TaskAdd(string lol)
     if (string.IsNullOrWhiteSpace(input))
     {
         Console.WriteLine("Вы не ввели задачу\n");
+        return false;
     }
     else
     {
         task.Add(input); // Добавление элемента в список
         Console.WriteLine($"Задача \"{input}\" успешно добавлена\n");
+        return true;
     }
 
 }
@@ -129,12 +133,13 @@ void TaskAdd(string lol)
 /// <summary>
 /// Метод проверки задач
 /// </summary>
-void TaskShow(string lol)
+bool TaskShow(string lol)
 {
 
     if (task.Count == 0)
     {
-        Console.WriteLine("Список задач пуст\n");
+        Console.WriteLine("Список задач пуст\n"); 
+        return false;
     }
     else
     {
@@ -145,26 +150,17 @@ void TaskShow(string lol)
             Console.WriteLine($"Задача {i++}:{tasks}");
         }
         Console.WriteLine("\n");
+        return true;
     }
 }
 
 /// <summary>
 /// Метод удаления задач
 /// </summary>
-void TaskRemove(string lol)
+bool TaskRemove(string lol)
 {
-
-    if (task.Count == 0)
+    if (TaskShow(""))
     {
-        Console.WriteLine("Список задач пуст\n");
-    }
-    else
-    {
-        int i = 1;
-        foreach (var tasks in task)
-        {
-            Console.WriteLine($"Задача {i++}:{tasks}");
-        }
         Console.WriteLine("Какую задачу удалить? Введите номер задачи\n");
 
         string? input = Console.ReadLine();
@@ -182,10 +178,10 @@ void TaskRemove(string lol)
             // Используем TryParse для проверки, является ли ввод числом
             if (int.TryParse(input, out number))
             {
-                if (number >=1 && number <= task.Count)
+                if (number >= 1 && number <= task.Count)
                 {
-                    string taska = task[number-1];
-                    task.RemoveAt(number-1);
+                    string taska = task[number - 1];
+                    task.RemoveAt(number - 1);
                     Console.WriteLine($"Задача \"{taska}\" успешно удалена.\n");
                 }
                 else
@@ -198,7 +194,11 @@ void TaskRemove(string lol)
                 Console.WriteLine("Ошибка: введено не число.\n");
             }
         }
-
+        return true;
+    }
+    else
+    {
+        return false;
     }
 }
 
