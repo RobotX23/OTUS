@@ -84,6 +84,10 @@ try
         {
             Console.WriteLine(ex.Message); 
         }
+        catch (DublicateTaskException ex) 
+        {
+            Console.WriteLine(ex.Message);
+        }
     }
  
 }
@@ -224,6 +228,11 @@ bool TaskAdd(string lol)
         throw new TaskLengthLimitException(input.Length, maxline);
     }
 
+    if(task.Contains(input))
+    {
+        throw new DublicateTaskException(input);
+    }
+
     else
     {
         task.Add(input); // Добавление элемента в список
@@ -325,6 +334,14 @@ public class TaskCountLimitException : Exception
 public class TaskLengthLimitException : Exception
 {
     public TaskLengthLimitException(int taskLength, int taskLengthLimit) : base($"Длинна задачи '{taskLength}' превышает максимальное допустимое значение {taskLengthLimit}. \n")
+    {
+    }
+
+}
+
+public class DublicateTaskException : Exception
+{
+    public DublicateTaskException(string task) : base($"Задача {task} уже существует.\n")
     {
     }
 
