@@ -4,12 +4,14 @@ using System.Threading.Tasks;
 string? name = null;
 
 int maxtasks;
+int maxline;
 
 List<string> task = new List<string>();
 
 
 try
 {
+
     while (true)
     {
         try
@@ -22,7 +24,7 @@ try
             {
                 throw new ArgumentException("Количество задач должно быть от 1 до 100.\n");
             }
-            Console.WriteLine($"Вы введи: {maxtasks} задач.");
+            Console.WriteLine($"Вы введи: {maxtasks} задачу(и).");
             break;
 
         }
@@ -30,23 +32,60 @@ try
         {
             Console.WriteLine("Ошибка: вы ввели не корректное число.\n");
         }
-        catch(ArgumentException ex)
+        catch (ArgumentException ex)
+        {
+            Console.WriteLine(ex.Message);
+        }
+    }
+
+    while (true)
+    {
+        try
+        {
+            Console.WriteLine("Введите максимальную длинну задач: ");
+            string? imput = Console.ReadLine();
+            maxline = int.Parse(imput);
+
+            if (maxline < 1 || maxline > 100)
+            {
+                throw new ArgumentException("Количество задач должно быть от 1 до 100.\n");
+            }
+            Console.WriteLine($"Вы введи: {maxline} длинну задачи.");
+            break;
+
+        }
+        catch (FormatException)
+        {
+            Console.WriteLine("Ошибка: вы ввели не корректное число.\n");
+        }
+        catch (ArgumentException ex)
         {
             Console.WriteLine(ex.Message);
         }
     }
 
 
-
     Console.WriteLine("Привет!\nВведи следующие команды\n/start, /help, /info, /exit.\n");
     while (true)
     {
-        if (Returne(Console.ReadLine()))
+        try
         {
-            break;
+            if (Returne(Console.ReadLine()))
+            {
+                break;
+            }
         }
-
+           
+        catch (TaskCountLimitException ex)
+        {
+            Console.WriteLine(ex.Message);
+        }
+        catch (TaskLengthLimitException ex)
+        {
+            Console.WriteLine(ex.Message); 
+        }
     }
+ 
 }
 catch (Exception ex) 
 {
@@ -62,6 +101,7 @@ catch (Exception ex)
         Console.WriteLine($"StackTrace: {ex.InnerException.StackTrace}");
     }
 }
+
 
 
 
@@ -164,34 +204,32 @@ void NameVerification(string massege, string? name)
 /// </summary>
 bool TaskAdd(string lol)
 {
-    try
+    
+    if (task.Count > maxtasks-1)
     {
-        if (task.Count > maxtasks-1)
-        {
-            throw new TaskCountLimitException(maxtasks);
-        }
-        Console.WriteLine("Введите описание задачи:");
-        string? input = Console.ReadLine();
-
-        // Проверка на null или пустую строку
-        if (string.IsNullOrWhiteSpace(input))
-        {
-            Console.WriteLine("Вы не ввели задачу\n");
-            return false;
-        }
-        else
-        {
-            task.Add(input); // Добавление элемента в список
-            Console.WriteLine($"Задача \"{input}\" успешно добавлена\n");
-            return true;
-        }
+        throw new TaskCountLimitException(maxtasks);
     }
-    catch (TaskCountLimitException ex)
+    Console.WriteLine("Введите описание задачи:");
+    string? input = Console.ReadLine();
+
+    // Проверка на null или пустую строку
+    if (string.IsNullOrWhiteSpace(input))
     {
-        Console.WriteLine(ex.Message);
+        Console.WriteLine("Вы не ввели задачу\n");
+        return false;
+    }
+
+    if (input.Length > maxline)
+    {
+        throw new TaskLengthLimitException(input.Length, maxline);
+    }
+
+    else
+    {
+        task.Add(input); // Добавление элемента в список
+        Console.WriteLine($"Задача \"{input}\" успешно добавлена\n");
         return true;
     }
-
 
 }
 
@@ -281,5 +319,16 @@ public class TaskCountLimitException : Exception
     public TaskCountLimitException(int taskCountLimit) : base( $"Превышено максимальное количество задач равное {taskCountLimit}. \n") 
     {
     } 
+
 }
+
+public class TaskLengthLimitException : Exception
+{
+    public TaskLengthLimitException(int taskLength, int taskLengthLimit) : base($"Длинна задачи '{taskLength}' превышает максимальное допустимое значение {taskLengthLimit}. \n")
+    {
+    }
+
+}
+
+
 
