@@ -88,6 +88,10 @@ try
         {
             Console.WriteLine(ex.Message);
         }
+        catch(ArgumentException ex)
+        { 
+            Console.WriteLine(ex.Message); 
+        }
     }
  
 }
@@ -157,9 +161,8 @@ bool Returne(string? text)
 bool Echo(string command)
 {
     string[] parts = command.Split(' ', 2); //Разделение строки по пробелу после команды
-    if (parts.Length == 1)
+    if (ParseAndValidatelnt(parts[1], 1, 100) == 0)
     {
-        NameVerification("Пожалуйста, введите сообщение после команды /echo через пробел.\n", name);
         return false;
     }
     else
@@ -223,7 +226,7 @@ bool TaskAdd(string lol)
         return false;
     }
 
-    if (input.Length > maxline)
+    if (ParseAndValidatelnt(input, 1, maxline) > maxline)
     {
         throw new TaskLengthLimitException(input.Length, maxline);
     }
@@ -265,6 +268,17 @@ bool TaskShow(string lol)
         Console.WriteLine("\n");
         return true;
     }
+}
+
+
+int ParseAndValidatelnt(string? str, int min, int max)
+{
+    int result = str.Length;
+    if (result < min || result > max)
+    {
+        throw new ArgumentException($"Количество строк в сообщение должно быть от {min} до {max}.\n");
+    }
+    return result;
 }
 
 /// <summary>
