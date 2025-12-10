@@ -78,6 +78,10 @@ try
         {
             Console.WriteLine(ex.Message);
         }
+        catch (ArgumentException ex)
+        { 
+            Console.WriteLine(ex.Message); 
+        }
     }
  
 }
@@ -146,18 +150,14 @@ bool Returne(string? text)
 
 bool Echo(string command)
 {
-    string[] parts = command.Split(' ', 2); //Разделение строки по пробелу после команды
-    if (parts.Length == 1)
-    {
-        NameVerification("Пожалуйста, введите сообщение после команды /echo через пробел.\n", name);
-        return false;
-    }
-    else
-    {
-        string message = parts[1].Trim(); //Используем только вторую часть команды
-        NameVerification($"Вы ввели: {message}", name);
-        return true;
-    }
+    List<string> parts = new List<string>();
+    parts.AddRange(command.Split(' ', 2)); //Разделение строки по пробелу после команды
+    parts.Add(" ");
+    ValidateString(parts[1]);
+    string message = parts[1].Trim(); //Используем только вторую часть команды
+    NameVerification($"Вы ввели: {message}", name);
+    return true;
+    
 }
 
 
@@ -206,12 +206,7 @@ bool TaskAdd(string lol)
     Console.WriteLine("Введите описание задачи:");
     string? input = Console.ReadLine();
 
-    // Проверка на null или пустую строку
-    if (string.IsNullOrWhiteSpace(input))
-    {
-        Console.WriteLine("Вы не ввели задачу\n");
-        return false;
-    }
+    ValidateString(input);
 
     if (input.Length > maxline)
     {
@@ -308,6 +303,13 @@ int ParseAndValidatelnt(string? str, int min, int max)
     return result;
 }
 
+void ValidateString(string? str)
+{
+    if(string.IsNullOrWhiteSpace(str) || string.IsNullOrEmpty(str.Trim()))
+    {
+        throw new ArgumentException("Строка не может быть пустой, null или содержать только пробелы.");
+    }
+}
 
 namespace InteractiveСonsole
 {
