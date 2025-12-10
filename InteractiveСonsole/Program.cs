@@ -18,13 +18,8 @@ try
         {
             Console.WriteLine("Введите максимальное допустимое количество задач: ");
             string? imput = Console.ReadLine();
-            maxtasks = int.Parse(imput);
-
-            if (maxtasks < 1 || maxtasks > 100)
-            {
-                throw new ArgumentException("Количество задач должно быть от 1 до 100.\n");
-            }
-            Console.WriteLine($"Вы введи: {maxtasks} задачу(и).");
+            maxtasks = ParseAndValidatelnt(imput, 1, 100);
+            Console.WriteLine($"Вы введи: {maxtasks} количество задач.");
             break;
 
         }
@@ -44,12 +39,7 @@ try
         {
             Console.WriteLine("Введите максимальную длинну задач: ");
             string? imput = Console.ReadLine();
-            maxline = int.Parse(imput);
-
-            if (maxline < 1 || maxline > 100)
-            {
-                throw new ArgumentException("Количество задач должно быть от 1 до 100.\n");
-            }
+            maxline = ParseAndValidatelnt(imput, 1, 100);
             Console.WriteLine($"Вы введи: {maxline} длинну задачи.");
             break;
 
@@ -306,6 +296,18 @@ bool TaskRemove(string lol)
         return false;
     }
 }
+
+int ParseAndValidatelnt(string? str, int min, int max)
+{
+    int result = int.Parse(str);
+
+    if (result < min || result > max)
+    {
+        throw new ArgumentException("Количество задач должно быть от 1 до 100.\n");
+    }
+    return result;
+}
+
 
 namespace InteractiveСonsole
 {
