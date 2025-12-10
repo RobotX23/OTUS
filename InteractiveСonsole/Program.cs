@@ -3,18 +3,71 @@ using System.Threading.Tasks;
 
 string? name = null;
 
+int maxtasks;
+
 List<string> task = new List<string>();
 
 
-Console.WriteLine("Привет!\nВведи следующие команды\n/start, /help, /info, /exit.\n");
-while (true)
+try
 {
-    if (Returne(Console.ReadLine())) 
+    while (true)
     {
-        break; 
+        try
+        {
+            Console.WriteLine("Введите максимальное допустимое количество задач: ");
+            string? imput = Console.ReadLine();
+            maxtasks = int.Parse(imput);
+
+            if (maxtasks < 1 || maxtasks > 100)
+            {
+                throw new ArgumentException("Количество задач должно быть от 1 до 100.\n");
+            }
+            Console.WriteLine($"Вы введи: {maxtasks} задач.");
+            break;
+
+        }
+        catch (FormatException)
+        {
+            Console.WriteLine("Ошибка: вы ввели не корректное число.\n");
+        }
+        catch(ArgumentException ex)
+        {
+            Console.WriteLine(ex.Message);
+        }
     }
 
+
+
+    Console.WriteLine("Привет!\nВведи следующие команды\n/start, /help, /info, /exit.\n");
+    while (true)
+    {
+        if (Returne(Console.ReadLine()))
+        {
+            break;
+        }
+
+    }
 }
+catch (Exception ex) 
+{
+    Console.WriteLine("Произошла непридвиденная ошибка: ");
+    Console.WriteLine($"Type: {ex.GetType()}");
+    Console.WriteLine($"Message6 {ex.Message}");
+    Console.WriteLine($"StackTrace: {ex.StackTrace}");
+    if(ex.InnerException != null)
+    {
+        Console.WriteLine("InnerException: ");
+        Console.WriteLine($"Type: {ex.InnerException.GetType()}");
+        Console.WriteLine($"Message6 {ex.InnerException.Message}");
+        Console.WriteLine($"StackTrace: {ex.InnerException.StackTrace}");
+    }
+}
+
+
+
+
+
+
 
 /// <summary>
 /// Основной метод работы алгоритма
@@ -111,21 +164,34 @@ void NameVerification(string massege, string? name)
 /// </summary>
 bool TaskAdd(string lol)
 {
-    Console.WriteLine("Введите описание задачи:");
-    string? input = Console.ReadLine();
+    try
+    {
+        if (task.Count > maxtasks-1)
+        {
+            throw new TaskCountLimitException(maxtasks);
+        }
+        Console.WriteLine("Введите описание задачи:");
+        string? input = Console.ReadLine();
 
-    // Проверка на null или пустую строку
-    if (string.IsNullOrWhiteSpace(input))
-    {
-        Console.WriteLine("Вы не ввели задачу\n");
-        return false;
+        // Проверка на null или пустую строку
+        if (string.IsNullOrWhiteSpace(input))
+        {
+            Console.WriteLine("Вы не ввели задачу\n");
+            return false;
+        }
+        else
+        {
+            task.Add(input); // Добавление элемента в список
+            Console.WriteLine($"Задача \"{input}\" успешно добавлена\n");
+            return true;
+        }
     }
-    else
+    catch (TaskCountLimitException ex)
     {
-        task.Add(input); // Добавление элемента в список
-        Console.WriteLine($"Задача \"{input}\" успешно добавлена\n");
+        Console.WriteLine(ex.Message);
         return true;
     }
+
 
 }
 
@@ -210,5 +276,10 @@ namespace InteractiveСonsole
 
 }
 
-
+public class TaskCountLimitException : Exception
+{ 
+    public TaskCountLimitException(int taskCountLimit) : base( $"Превышено максимальное количество задач равное {taskCountLimit}. \n") 
+    {
+    } 
+}
 
