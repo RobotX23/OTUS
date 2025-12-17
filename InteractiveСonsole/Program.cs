@@ -3,102 +3,79 @@ using System.Threading.Tasks;
 
 string? name = null;
 
-int maxtasks;
-int maxline;
+int maxtasks = 0;
+int maxline = 0;
 
 List<string> task = new List<string>();
 
-
-try
+while (true)
 {
-
-    while (true)
+    try
     {
-        try
+
+        if (maxtasks == 0)
         {
             Console.WriteLine("Введите максимальное допустимое количество задач: ");
             string? imput = Console.ReadLine();
             maxtasks = ParseAndValidatelnt(imput, 1, 100);
-            Console.WriteLine($"Вы введи: {maxtasks} количество задач.");
-            break;
+            Console.WriteLine($"Вы ввели: {maxtasks} количество задач.");
+        }
 
-        }
-        catch (FormatException)
-        {
-            Console.WriteLine("Ошибка: вы ввели не корректное число.\n");
-        }
-        catch (ArgumentException ex)
-        {
-            Console.WriteLine(ex.Message);
-        }
-    }
-
-    while (true)
-    {
-        try
+        if (maxline == 0)
         {
             Console.WriteLine("Введите максимальную длинну задач: ");
-            string? imput = Console.ReadLine();
-            maxline = ParseAndValidatelnt(imput, 1, 100);
+            string? imput_text = Console.ReadLine();
+            maxline = ParseAndValidatelnt(imput_text, 1, 100);
             Console.WriteLine($"Вы введи: {maxline} длинну задачи.");
+        }
+
+        if(name == null)
+                Console.WriteLine("Привет!\nВведи следующие команды\n/start, /help, /info, /exit.\n");
+
+        if (Returne(Console.ReadLine()))
+        {
             break;
+        }
 
-        }
-        catch (FormatException)
-        {
-            Console.WriteLine("Ошибка: вы ввели не корректное число.\n");
-        }
-        catch (ArgumentException ex)
-        {
-            Console.WriteLine(ex.Message);
-        }
+
+
     }
-
-
-    Console.WriteLine("Привет!\nВведи следующие команды\n/start, /help, /info, /exit.\n");
-    while (true)
+    catch (TaskCountLimitException ex)
     {
-        try
-        {
-            if (Returne(Console.ReadLine()))
-            {
-                break;
-            }
-        }
-           
-        catch (TaskCountLimitException ex)
-        {
-            Console.WriteLine(ex.Message);
-        }
-        catch (TaskLengthLimitException ex)
-        {
-            Console.WriteLine(ex.Message); 
-        }
-        catch (DublicateTaskException ex) 
-        {
-            Console.WriteLine(ex.Message);
-        }
-        catch (ArgumentException ex)
-        { 
-            Console.WriteLine(ex.Message); 
-        }
+        Console.WriteLine(ex.Message);
     }
- 
-}
-catch (Exception ex) 
-{
-    Console.WriteLine("Произошла непридвиденная ошибка: ");
-    Console.WriteLine($"Type: {ex.GetType()}");
-    Console.WriteLine($"Message6 {ex.Message}");
-    Console.WriteLine($"StackTrace: {ex.StackTrace}");
-    if(ex.InnerException != null)
+    catch (TaskLengthLimitException ex)
     {
-        Console.WriteLine("InnerException: ");
-        Console.WriteLine($"Type: {ex.InnerException.GetType()}");
-        Console.WriteLine($"Message6 {ex.InnerException.Message}");
-        Console.WriteLine($"StackTrace: {ex.InnerException.StackTrace}");
+        Console.WriteLine(ex.Message);
+    }
+    catch (DublicateTaskException ex)
+    {
+        Console.WriteLine(ex.Message);
+    }
+    catch (FormatException)
+    {
+        Console.WriteLine("Ошибка: вы ввели не корректное число.\n");
+    }
+    catch (ArgumentException ex)
+    {
+        Console.WriteLine(ex.Message);
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine("Произошла непридвиденная ошибка: ");
+        Console.WriteLine($"Type: {ex.GetType()}");
+        Console.WriteLine($"Message6 {ex.Message}");
+        Console.WriteLine($"StackTrace: {ex.StackTrace}");
+        if (ex.InnerException != null)
+        {
+            Console.WriteLine("InnerException: ");
+            Console.WriteLine($"Type: {ex.InnerException.GetType()}");
+            Console.WriteLine($"Message6 {ex.InnerException.Message}");
+            Console.WriteLine($"StackTrace: {ex.InnerException.StackTrace}");
+        }
     }
 }
+
 
 
 
@@ -294,7 +271,10 @@ bool TaskRemove(string lol)
 
 int ParseAndValidatelnt(string? str, int min, int max)
 {
-    int result = int.Parse(str);
+    if (!int.TryParse(str, out int result))
+    {
+        throw new FormatException("Ошибка: вы ввели некорректное число.\n");
+    }
 
     if (result < min || result > max)
     {
@@ -305,7 +285,7 @@ int ParseAndValidatelnt(string? str, int min, int max)
 
 void ValidateString(string? str)
 {
-    if(string.IsNullOrWhiteSpace(str) || string.IsNullOrEmpty(str.Trim()))
+    if(string.IsNullOrWhiteSpace(str))
     {
         throw new ArgumentException("Строка не может быть пустой, null или содержать только пробелы.");
     }
