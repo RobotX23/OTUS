@@ -3,18 +3,86 @@ using System.Threading.Tasks;
 
 string? name = null;
 
+int maxtasks = 0;
+int maxline = 0;
+
 List<string> task = new List<string>();
 
-
-Console.WriteLine("Привет!\nВведи следующие команды\n/start, /help, /info, /exit.\n");
 while (true)
 {
-    if (Returne(Console.ReadLine())) 
+    try
     {
-        break; 
-    }
 
+        if (maxtasks == 0)
+        {
+            Console.WriteLine("Введите максимальное допустимое количество задач: ");
+            string? imput = Console.ReadLine();
+            maxtasks = ParseAndValidatelnt(imput, 1, 100);
+            Console.WriteLine($"Вы ввели: {maxtasks} количество задач.");
+        }
+
+        if (maxline == 0)
+        {
+            Console.WriteLine("Введите максимальную длинну задач: ");
+            string? imput_text = Console.ReadLine();
+            maxline = ParseAndValidatelnt(imput_text, 1, 100);
+            Console.WriteLine($"Вы введи: {maxline} длинну задачи.");
+        }
+
+        if(name == null)
+                Console.WriteLine("Привет!\nВведи следующие команды\n/start, /help, /info, /exit.\n");
+
+        if (Returne(Console.ReadLine()))
+        {
+            break;
+        }
+
+
+
+    }
+    catch (TaskCountLimitException ex)
+    {
+        Console.WriteLine(ex.Message);
+    }
+    catch (TaskLengthLimitException ex)
+    {
+        Console.WriteLine(ex.Message);
+    }
+    catch (DublicateTaskException ex)
+    {
+        Console.WriteLine(ex.Message);
+    }
+    catch (FormatException)
+    {
+        Console.WriteLine("Ошибка: вы ввели не корректное число.\n");
+    }
+    catch (ArgumentException ex)
+    {
+        Console.WriteLine(ex.Message);
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine("Произошла непридвиденная ошибка: ");
+        Console.WriteLine($"Type: {ex.GetType()}");
+        Console.WriteLine($"Message6 {ex.Message}");
+        Console.WriteLine($"StackTrace: {ex.StackTrace}");
+        if (ex.InnerException != null)
+        {
+            Console.WriteLine("InnerException: ");
+            Console.WriteLine($"Type: {ex.InnerException.GetType()}");
+            Console.WriteLine($"Message6 {ex.InnerException.Message}");
+            Console.WriteLine($"StackTrace: {ex.InnerException.StackTrace}");
+        }
+    }
 }
+
+
+
+
+
+
+
+
 
 /// <summary>
 /// Основной метод работы алгоритма
@@ -59,18 +127,14 @@ bool Returne(string? text)
 
 bool Echo(string command)
 {
-    string[] parts = command.Split(' ', 2); //Разделение строки по пробелу после команды
-    if (parts.Length == 1)
-    {
-        NameVerification("Пожалуйста, введите сообщение после команды /echo через пробел.\n", name);
-        return false;
-    }
-    else
-    {
-        string message = parts[1].Trim(); //Используем только вторую часть команды
-        NameVerification($"Вы ввели: {message}", name);
-        return true;
-    }
+    List<string> parts = new List<string>();
+    parts.AddRange(command.Split(' ', 2)); //Разделение строки по пробелу после команды
+    parts.Add(" ");
+    ValidateString(parts[1]);
+    string message = parts[1].Trim(); //Используем только вторую часть команды
+    NameVerification($"Вы ввели: {message}", name);
+    return true;
+    
 }
 
 
@@ -111,15 +175,26 @@ void NameVerification(string massege, string? name)
 /// </summary>
 bool TaskAdd(string lol)
 {
+    
+    if (task.Count > maxtasks-1)
+    {
+        throw new TaskCountLimitException(maxtasks);
+    }
     Console.WriteLine("Введите описание задачи:");
     string? input = Console.ReadLine();
 
-    // Проверка на null или пустую строку
-    if (string.IsNullOrWhiteSpace(input))
+    ValidateString(input);
+
+    if (input.Length > maxline)
     {
-        Console.WriteLine("Вы не ввели задачу\n");
-        return false;
+        throw new TaskLengthLimitException(input.Length, maxline);
     }
+
+    if(task.Contains(input))
+    {
+        throw new DublicateTaskException(input);
+    }
+
     else
     {
         task.Add(input); // Добавление элемента в список
@@ -194,6 +269,28 @@ bool TaskRemove(string lol)
     }
 }
 
+int ParseAndValidatelnt(string? str, int min, int max)
+{
+    if (!int.TryParse(str, out int result))
+    {
+        throw new FormatException("Ошибка: вы ввели некорректное число.\n");
+    }
+
+    if (result < min || result > max)
+    {
+        throw new ArgumentException("Количество задач должно быть от 1 до 100.\n");
+    }
+    return result;
+}
+
+void ValidateString(string? str)
+{
+    if(string.IsNullOrWhiteSpace(str))
+    {
+        throw new ArgumentException("Строка не может быть пустой, null или содержать только пробелы.");
+    }
+}
+
 namespace InteractiveСonsole
 {
     /// <summary>
@@ -207,6 +304,30 @@ namespace InteractiveСonsole
 
     }
 
+
+}
+
+public class TaskCountLimitException : Exception
+{ 
+    public TaskCountLimitException(int taskCountLimit) : base( $"Превышено максимальное количество задач равное {taskCountLimit}. \n") 
+    {
+    } 
+
+}
+
+public class TaskLengthLimitException : Exception
+{
+    public TaskLengthLimitException(int taskLength, int taskLengthLimit) : base($"Длинна задачи '{taskLength}' превышает максимальное допустимое значение {taskLengthLimit}. \n")
+    {
+    }
+
+}
+
+public class DublicateTaskException : Exception
+{
+    public DublicateTaskException(string task) : base($"Задача {task} уже существует.\n")
+    {
+    }
 
 }
 
