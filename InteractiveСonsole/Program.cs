@@ -1,7 +1,16 @@
 ﻿using InteractiveСonsole;
 using System.Threading.Tasks;
 
+
+
+
 string? name = null;
+
+
+List<ToDoUser> users = new List<ToDoUser>(); 
+
+
+
 
 int maxtasks = 0;
 int maxline = 0;
@@ -95,7 +104,25 @@ bool Returne(string? text)
             if (string.IsNullOrWhiteSpace(name))
             {
                 Console.WriteLine("Введите имя!\n");
-                name = Console.ReadLine();
+                string? nameConsol = Console.ReadLine();
+                foreach (ToDoUser namers in users)
+                {
+                    if (namers.TelegramUserName == nameConsol)
+                    {
+                        name = namers.TelegramUserName;
+                    }
+                    else
+                    {
+                        name = null;
+                    }
+               
+                }
+                if (name == null)
+                {
+                    var user = new ToDoUser(nameConsol);
+                    users.Add(user);
+                    name = user.TelegramUserName;
+                }
                 Console.WriteLine($"Теперь ты авторизован {name}. Чем могу помочь?\n");
             }
             else
