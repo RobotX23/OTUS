@@ -115,7 +115,9 @@ namespace InteractiveСonsole
                         }
                         if (name == null)
                         {
-                            user = new ToDoUser(nameConsol);
+                            var lol = _update.Message.From;
+                            long lol1 = lol.Id;
+                            user = new ToDoUser(nameConsol, lol1);
                             users.Add(user);
                             name = user.TelegramUserName;
                         }
