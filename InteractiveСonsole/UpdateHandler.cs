@@ -7,9 +7,8 @@ namespace InteractiveСonsole
     internal class UpdateHandler : IUpdateHandler
     {
         string? name = null;
+        UserService users = new UserService();
 
-
-        List<ToDoUser> users = new List<ToDoUser>();
         List<ToDoItem> taskes = new List<ToDoItem>();
         ToDoUser user = null;
 
@@ -96,38 +95,22 @@ namespace InteractiveСonsole
             switch (text)
             {
                 case "/start"://Обработка команды start
-                    if (string.IsNullOrWhiteSpace(name))
-                    {
-                        _botClient.SendMessage(_update.Message.Chat, "Введите имя!");
-                        string? nameConsol = Console.ReadLine();
-                        foreach (ToDoUser namers in users)
-                        {
-                            if (namers.TelegramUserName == nameConsol)
-                            {
-                                name = namers.TelegramUserName;
-                                user = namers;
-                            }
-                            else
-                            {
-                                name = null;
-                            }
 
-                        }
-                        if (name == null)
-                        {
-                            var lol = _update.Message.From;
-                            long lol1 = lol.Id;
-                            user = new ToDoUser(nameConsol, lol1);
-                            users.Add(user);
-                            name = user.TelegramUserName;
-                        }
-                        _botClient.SendMessage(_update.Message.Chat, $"Теперь ты авторизован {name}. Чем могу помочь?\n");
+                    var user = _update.Message.From;
+                    long userId = user.Id;
+                    string userName = user.Username;
+
+                    if(users.GetUser(userId) == null)
+                    {
+                        name =  users.RegisterUser(userId, userName).TelegramUserName;
                     }
                     else
                     {
-                        NameVerification(StartGud, name);
+                        name = users.GetUser(userId).TelegramUserName;
                     }
-                    return false;
+                    NameVerification("Не получилось определить имя чата", name);
+
+                        return false;
                 case "/help": //Обработка команды help
                     NameVerification(Help, name);
                     return false;

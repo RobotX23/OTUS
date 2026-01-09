@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace InteractiveСonsole
 {
-    internal class ToDoUser
+    public class ToDoUser
     {
         public Guid UserId { get; }
         public string TelegramUserName { get; }
