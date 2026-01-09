@@ -1,12 +1,22 @@
 ﻿using InteractiveСonsole;
 using System.Threading.Tasks;
 
+
+
+
 string? name = null;
+
+
+List<ToDoUser> users = new List<ToDoUser>(); 
+List<ToDoItem> taskes = new List<ToDoItem>();
+ToDoUser user = null;
+
+
+
 
 int maxtasks = 0;
 int maxline = 0;
 
-List<string> task = new List<string>();
 
 while (true)
 {
@@ -95,7 +105,26 @@ bool Returne(string? text)
             if (string.IsNullOrWhiteSpace(name))
             {
                 Console.WriteLine("Введите имя!\n");
-                name = Console.ReadLine();
+                string? nameConsol = Console.ReadLine();
+                foreach (ToDoUser namers in users)
+                {
+                    if (namers.TelegramUserName == nameConsol)
+                    {
+                        name = namers.TelegramUserName;
+                        user = namers;
+                    }
+                    else
+                    {
+                        name = null;
+                    }
+               
+                }
+                if (name == null)
+                {
+                    user = new ToDoUser(nameConsol);
+                    users.Add(user);
+                    name = user.TelegramUserName;
+                }
                 Console.WriteLine($"Теперь ты авторизован {name}. Чем могу помочь?\n");
             }
             else
@@ -119,6 +148,10 @@ bool Returne(string? text)
             return NotName(TaskShow, "");
         case "/remowetask":
             return NotName(TaskRemove, "");
+        case string command when command.StartsWith("/completetask"):
+            return NotName(CompleteTask, command);
+        case "/showalltasks":
+            return NotName(ShowAllTasks, "");
         default: //если команды не распозднаны то выводим сообщение
             Console.WriteLine("Команда не распознана\n");
             return false;
@@ -175,6 +208,7 @@ void NameVerification(string massege, string? name)
 /// </summary>
 bool TaskAdd(string lol)
 {
+    var task = taskes.Where(x => x.User == user).ToList();
     
     if (task.Count > maxtasks-1)
     {
@@ -190,31 +224,30 @@ bool TaskAdd(string lol)
         throw new TaskLengthLimitException(input.Length, maxline);
     }
 
-    if(task.Contains(input))
+    if(task.FirstOrDefault(x => x.Name == input) != null)
     {
         throw new DublicateTaskException(input);
     }
 
     else
     {
-        task.Add(input); // Добавление элемента в список
+        taskes.Add(new ToDoItem(user, input));
         Console.WriteLine($"Задача \"{input}\" успешно добавлена\n");
         return true;
     }
 
 }
 
-
 /// <summary>
-/// Метод проверки задач
+/// Метод вывода всех задач
 /// </summary>
-bool TaskShow(string lol)
+bool ShowAllTasks(string lol)
 {
-
+    var task = taskes.Where(x => x.User == user).OrderByDescending(x => x.Name).ToList();
     if (task.Count == 0)
     {
-        Console.WriteLine("Список задач пуст\n"); 
-        return false;
+        Console.WriteLine("Список задач пуст\n");
+        return true;
     }
     else
     {
@@ -222,9 +255,75 @@ bool TaskShow(string lol)
         Console.WriteLine("Ваш список задач:\n");
         foreach (var tasks in task)
         {
-            Console.WriteLine($"Задача {i++}:{tasks}");
+            Console.WriteLine($"Задача {i++}:({tasks.State}) {tasks.Name} - {tasks.CreateAt} - {tasks.Id}");
         }
         Console.WriteLine("\n");
+        return true;
+    }
+}
+
+
+
+
+
+/// <summary>
+/// Завершение задачи
+/// </summary>
+bool CompleteTask(string command)
+{
+    var task = taskes.Where(x => x.User == user && x.State == ToDoItemState.Active).OrderBy(x => x.Name).ToList();
+    if (task.Count == 0)
+    {
+        Console.WriteLine("Список задач пуст\n");
+        return true;
+    }
+    else
+    {
+        List<string> parts = new List<string>();
+        parts.AddRange(command.Split(' ', 2)); //Разделение строки по пробелу после команды
+        parts.Add(" ");
+        ValidateString(parts[1]);
+        string id = parts[1].Trim(); //Используем только вторую часть команды
+
+        var zadacha = task.FirstOrDefault(x => x.Id == Guid.Parse(id));
+        if (zadacha != null)
+        {
+            zadacha.ChangeState(ToDoItemState.Completed);
+            Console.WriteLine($"Задача {zadacha.Name} - {zadacha.Id} завершена!\n");
+        }
+
+        return true;
+    }
+}
+
+
+
+
+
+/// <summary>
+/// Метод проверки задач
+/// </summary>
+bool TaskShow(string lol)
+{
+    var task = taskes.Where(x => x.User == user && x.State == ToDoItemState.Active).OrderByDescending(x => x.Name).ToList();
+    if (task.Count == 0)
+    {
+        Console.WriteLine("Список задач пуст\n"); 
+        return true;
+    }
+    else if(lol == "")
+    {
+        int i = 1;
+        Console.WriteLine("Ваш список задач:\n");
+        foreach (var tasks in task)
+        {
+            Console.WriteLine($"Задача {i++}:{tasks.Name} - {tasks.CreateAt} - {tasks.Id}");
+        }
+        Console.WriteLine("\n");
+        return true;
+    }
+    else
+    {
         return true;
     }
 }
@@ -234,8 +333,10 @@ bool TaskShow(string lol)
 /// </summary>
 bool TaskRemove(string lol)
 {
-    if (TaskShow(""))
+    if (ShowAllTasks(""))
     {
+        var task = taskes.Where(x => x.User == user).OrderByDescending(x => x.Name).ToList();
+
         Console.WriteLine("Какую задачу удалить? Введите номер задачи\n");
 
         string? input = Console.ReadLine();
@@ -247,9 +348,9 @@ bool TaskRemove(string lol)
         {
             if (number >= 1 && number <= task.Count)
             {
-                string taska = task[number - 1];
-                task.RemoveAt(number - 1);
-                Console.WriteLine($"Задача \"{taska}\" успешно удалена.\n");
+                ToDoItem taska = task[number - 1];
+                taskes.Remove(taska);
+                Console.WriteLine($"Задача \"{taska.Name}\" успешно удалена.\n");
             }
             else
             {
@@ -298,8 +399,8 @@ namespace InteractiveСonsole
     /// </summary>
     public static class Commands
     {
-        public static string Help { get; set; } = "Просто вводи команды\n/start, /help, /info, /exit.\nЕсли авторизовался, то вводи команду /echo, /addtask, /showtasks, /remowetask\nУдачи!!!!!";
-        public static string Info { get; set; } = "Версия: 2\nДата создания: 14.11.2025\nДата обновления: 04.12.2025";
+        public static string Help { get; set; } = "Просто вводи команды\n/start, /help, /info, /exit.\nЕсли авторизовался, то вводи команду /echo, /addtask, /showtasks, /remowetask, /completetask, /showalltasks\nУдачи!!!!!";
+        public static string Info { get; set; } = "Версия: 2\nДата создания: 14.11.2025\nДата обновления: 22.12.2025";
         public static string StartGud { get; set; } = "Ты уже авторизованы";
 
     }
