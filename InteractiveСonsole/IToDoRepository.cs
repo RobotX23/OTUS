@@ -19,5 +19,6 @@ namespace InteractiveСonsole
         bool ExistsByName(Guid userId, string name);
         //Возвращает количество активных задач у пользователя
         int CountActive(Guid userId);
+
     }
 }
