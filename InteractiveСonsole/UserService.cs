@@ -10,28 +10,32 @@ namespace InteractiveСonsole
 {
     internal class UserService : IUserService
     {
-        private List<ToDoUser> users = new List<ToDoUser>();
+        private readonly IUserRepository _userRepository;
 
-        public UserService() 
+        public UserService(IUserRepository userRepository) 
         {
-            users = new List<ToDoUser>();
+            _userRepository = userRepository ?? throw new ArgumentException(nameof(userRepository));
         }
+        /// <summary>
+        /// Поиск существующего пользователя
+        /// </summary>
         public ToDoUser? GetUser(long telegramUserId)
         {
-            foreach (ToDoUser namers in users)
-            {
-                if (namers.TelegramUserId == telegramUserId)
-                {
-                    return namers;
-                }
-            }
-            return null;
+            return _userRepository.GetUserByTelegramUserId(telegramUserId);
         }
-
+        /// <summary>
+        /// Регистрация пользователя
+        /// </summary>
         public ToDoUser RegisterUser(long telegramUserId, string telegrsmUserName)
         {
+            var existingUser = _userRepository.GetUserByTelegramUserId(telegramUserId);
+            if (existingUser != null)
+            {
+                return existingUser;
+            }
+
             var user = new ToDoUser(telegrsmUserName, telegramUserId);
-            users.Add(user);
+            _userRepository.Add(user);
             return user;
             
         }

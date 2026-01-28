@@ -6,8 +6,10 @@ namespace InteractiveСonsole
 {
     internal class UpdateHandler : IUpdateHandler
     {
+
         string? name = null;
-        UserService users = new UserService();
+        InMemoryUserRepository userRepository = new InMemoryUserRepository();
+        UserService users;
 
         List<ToDoItem> taskes = new List<ToDoItem>();
         ToDoUser user2 = null;
@@ -24,6 +26,8 @@ namespace InteractiveСonsole
         {
             _botClient = botClient;
             _update = update;
+
+            users = new UserService(userRepository);
             while (true)
             {
                 try
