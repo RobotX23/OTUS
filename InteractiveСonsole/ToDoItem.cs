@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace InteractiveСonsole
 {
-    internal class ToDoItem
+    public class ToDoItem
     {
         public Guid Id { get; }
         public ToDoUser User { get; }
@@ -34,7 +34,7 @@ namespace InteractiveСonsole
     }
 
 
-    enum ToDoItemState
+    public enum ToDoItemState
     {
         Active,
         Completed
