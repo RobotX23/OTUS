@@ -332,7 +332,7 @@ namespace InteractiveСonsole
             }
         }
 
-        string Help { get; set; } = "Просто вводи команды\n/start, /help, /info, /exit.\nЕсли авторизовался, то вводи команду /addtask, /showtasks, /remowetask (фрмат ввода '№ задачи'), /completetask (фрмат ввода 'команда id задачи'), /showalltasks, /find (вводи часть задачи и получай список задач начинающийся на данное слово)\nУдачи!!!!!";
+        string Help { get; set; } = "Просто вводи команды\n/start, /help, /info, /exit.\nЕсли авторизовался, то вводи команду /addtask, /showtasks, /remowetask (фрмат ввода '№ задачи'), /completetask (фрмат ввода 'команда id задачи'), /showalltasks, /find (вводи часть задачи и получай список задач начинающийся на данное слово), /report (вывод статистики)\nУдачи!!!!!";
         string Info { get; set; } = "Версия: 2\nДата создания: 14.11.2025\nДата обновления: 29.01.2026";
 
     }
