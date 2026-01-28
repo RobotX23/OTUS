@@ -15,7 +15,6 @@ namespace InteractiveСonsole
         ToDoService toDoService;
         IToDoReportService toDoReportService;
 
-        List<ToDoItem> taskes = new List<ToDoItem>();
         ToDoUser user2 = null;
 
         ITelegramBotClient _botClient;
@@ -333,8 +332,8 @@ namespace InteractiveСonsole
             }
         }
 
-        string Help { get; set; } = "Просто вводи команды\n/start, /help, /info, /exit.\nЕсли авторизовался, то вводи команду /addtask, /showtasks, /remowetask (фрмат ввода '№ задачи'), /completetask (фрмат ввода 'команда id задачи'), /showalltasks\nУдачи!!!!!";
-        string Info { get; set; } = "Версия: 2\nДата создания: 14.11.2025\nДата обновления: 11.01.2026";
+        string Help { get; set; } = "Просто вводи команды\n/start, /help, /info, /exit.\nЕсли авторизовался, то вводи команду /addtask, /showtasks, /remowetask (фрмат ввода '№ задачи'), /completetask (фрмат ввода 'команда id задачи'), /showalltasks, /find (вводи часть задачи и получай список задач начинающийся на данное слово)\nУдачи!!!!!";
+        string Info { get; set; } = "Версия: 2\nДата создания: 14.11.2025\nДата обновления: 29.01.2026";
 
     }
 }
