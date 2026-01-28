@@ -20,5 +20,7 @@ namespace InteractiveСonsole
         //Возвращает количество активных задач у пользователя
         int CountActive(Guid userId);
 
+        IReadOnlyList<ToDoItem> Find(Guid userId, Func<ToDoItem, bool> predicate);
+
     }
 }

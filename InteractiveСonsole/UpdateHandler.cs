@@ -146,6 +146,37 @@ namespace InteractiveСonsole
                         _botClient.SendMessage(_update.Message.Chat, $"Статистика по задачам на {report.generatedAt}. Всего: {report.total}; Завершено {report.completed}; Активных: {report.active};");
                         return false;
                     }
+                case string command when command.StartsWith("/find"):
+                    if (string.IsNullOrWhiteSpace(name))
+                    {
+                        _botClient.SendMessage(_update.Message.Chat, "Команда не распознана");
+                        return false;
+                    }
+                    else
+                    {
+                        List<string> parts_1 = new List<string>();
+                        parts_1.AddRange(command.Split(' ', 2)); //Разделение строки по пробелу после команды
+                        parts_1.Add(" ");
+                        ValidateString(parts_1[1]);
+                        string task_2 = parts_1[1].Trim(); //Используем только вторую часть команды
+                        var taski = toDoService.Find(user2, task_2);
+
+                        int i = 1;
+                        if (taski != null)
+                        {
+                            _botClient.SendMessage(_update.Message.Chat, "Ваш список задач:");
+                            foreach (var tasks in taski)
+                            {
+                                _botClient.SendMessage(_update.Message.Chat, $"Задача {i++}:{tasks.Name} - {tasks.CreateAt} - {tasks.Id}");
+                            }
+                        }
+                        else
+                        {
+                            _botClient.SendMessage(_update.Message.Chat, $"Список задач пуст!");
+                        }
+
+                        return false;
+                    }
                 case string command when command.StartsWith("/addtask"):
                     if (string.IsNullOrWhiteSpace(name))
                     {

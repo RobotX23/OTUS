@@ -48,6 +48,15 @@ namespace InteractiveСonsole
             }
         }
         /// <summary>
+        /// Список задач пользователя по условию предиката
+        /// </summary>
+        public IReadOnlyList<ToDoItem> Find(Guid userId, Func<ToDoItem, bool> predicate)
+        {
+            return toDoItems.Where(x=> x.User.UserId == userId && predicate(x)).ToList();
+        }
+
+
+        /// <summary>
         /// Вывод задачи по id
         /// </summary>
         public ToDoItem? Get(Guid id)

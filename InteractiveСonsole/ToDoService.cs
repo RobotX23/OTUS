@@ -99,5 +99,12 @@ namespace InteractiveСonsole
                 zadacha.ChangeState(ToDoItemState.Completed);
             }
         }
+        /// <summary>
+        /// Вывод задач по части слова
+        /// </summary>
+        public IReadOnlyList<ToDoItem> Find(ToDoUser user, string namePrefix)
+        {
+            return _toDoRepository.Find(user.UserId, x => x.Name.StartsWith(namePrefix));
+        }
     }
 }
