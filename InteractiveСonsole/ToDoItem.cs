@@ -6,11 +6,14 @@ using System.Threading.Tasks;
 
 namespace InteractiveСonsole
 {
+    /// <summary>
+    /// Класс задачи
+    /// </summary>
     public class ToDoItem
     {
         public Guid Id { get; }
-        public ToDoUser User { get; }
-        public string Name { get; }
+        public ToDoUser User { get; set; }
+        public string Name { get; set; }
         public DateTime CreateAt { get; }
         public ToDoItemState State { get; set; }
         public DateTime? StateChangeAt { get; set; }

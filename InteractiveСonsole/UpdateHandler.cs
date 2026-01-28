@@ -9,7 +9,9 @@ namespace InteractiveСonsole
 
         string? name = null;
         InMemoryUserRepository userRepository = new InMemoryUserRepository();
+        InMemoryToDoRepository toDoRepository = new InMemoryToDoRepository();
         UserService users;
+        ToDoService toDoService;
 
         List<ToDoItem> taskes = new List<ToDoItem>();
         ToDoUser user2 = null;
@@ -17,7 +19,6 @@ namespace InteractiveСonsole
         ITelegramBotClient _botClient;
         Update _update;
 
-        ToDoService toDoService = new ToDoService();
 
 
         int maxtasks = 0;
@@ -28,6 +29,7 @@ namespace InteractiveСonsole
             _update = update;
 
             users = new UserService(userRepository);
+            toDoService = new ToDoService(toDoRepository);
             while (true)
             {
                 try
