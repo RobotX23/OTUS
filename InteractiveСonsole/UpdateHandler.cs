@@ -12,6 +12,7 @@ namespace InteractiveСonsole
         InMemoryToDoRepository toDoRepository = new InMemoryToDoRepository();
         UserService users;
         ToDoService toDoService;
+        IToDoReportService toDoReportService;
 
         List<ToDoItem> taskes = new List<ToDoItem>();
         ToDoUser user2 = null;
@@ -25,11 +26,12 @@ namespace InteractiveСonsole
         int maxline = 0;
         public void HandleUpdateAsync(ITelegramBotClient botClient, Update update)
         {
+            users = new UserService(userRepository);
+            toDoService = new ToDoService(toDoRepository);
             _botClient = botClient;
             _update = update;
 
-            users = new UserService(userRepository);
-            toDoService = new ToDoService(toDoRepository);
+
             while (true)
             {
                 try
@@ -131,6 +133,19 @@ namespace InteractiveСonsole
                     return false;
                 case "/exit":
                     return true; //Обработка команды exid
+                case "/report":
+                    if (string.IsNullOrWhiteSpace(name))
+                    {
+                        _botClient.SendMessage(_update.Message.Chat, "Команда не распознана");
+                        return false;
+                    }
+                    else 
+                    {
+                        toDoReportService = new ToDoReportService(toDoRepository);
+                        var report = toDoReportService.GetUserStats(user2.UserId);
+                        _botClient.SendMessage(_update.Message.Chat, $"Статистика по задачам на {report.generatedAt}. Всего: {report.total}; Завершено {report.completed}; Активных: {report.active};");
+                        return false;
+                    }
                 case string command when command.StartsWith("/addtask"):
                     if (string.IsNullOrWhiteSpace(name))
                     {

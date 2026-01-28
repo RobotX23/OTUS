@@ -11,11 +11,27 @@ namespace InteractiveСonsole
     /// </summary>
     public class ToDoItem
     {
+
         public Guid Id { get; }
+        /// <summary>
+        /// Имя пользователя
+        /// </summary>
         public ToDoUser User { get; set; }
+        /// <summary>
+        /// Название задачи
+        /// </summary>
         public string Name { get; set; }
+        /// <summary>
+        /// Время создания
+        /// </summary>
         public DateTime CreateAt { get; }
+        /// <summary>
+        /// Статус задачи
+        /// </summary>
         public ToDoItemState State { get; set; }
+        /// <summary>
+        /// Время изменения состояния
+        /// </summary>
         public DateTime? StateChangeAt { get; set; }
 
         public ToDoItem(ToDoUser user, string name) 
