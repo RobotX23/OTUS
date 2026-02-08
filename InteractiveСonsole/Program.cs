@@ -26,29 +26,7 @@ catch (Exception ex)
 }
 
 
-public class TaskCountLimitException : Exception
-{ 
-    public TaskCountLimitException(int taskCountLimit) : base( $"Превышено максимальное количество задач равное {taskCountLimit}.") 
-    {
-    } 
 
-}
-
-public class TaskLengthLimitException : Exception
-{
-    public TaskLengthLimitException(int taskLength, int taskLengthLimit) : base($"Длинна задачи '{taskLength}' превышает максимальное допустимое значение {taskLengthLimit}.")
-    {
-    }
-
-}
-
-public class DublicateTaskException : Exception
-{
-    public DublicateTaskException(string task) : base($"Задача {task} уже существует.")
-    {
-    }
-
-}
 
 
 

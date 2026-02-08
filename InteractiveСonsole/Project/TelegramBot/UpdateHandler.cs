@@ -1,29 +1,37 @@
 ﻿using Otus.ToDoList.ConsoleBot;
 using Otus.ToDoList.ConsoleBot.Types;
+using InteractiveСonsole.Project.Core.Exceptions;
 
 
 namespace InteractiveСonsole
 {
     internal class UpdateHandler : IUpdateHandler
     {
-        string? name = null;
-        UserService users = new UserService();
 
-        List<ToDoItem> taskes = new List<ToDoItem>();
+        string? name = null;
+        InMemoryUserRepository userRepository = new InMemoryUserRepository();
+        InMemoryToDoRepository toDoRepository = new InMemoryToDoRepository();
+        UserService users;
+        ToDoService toDoService;
+        IToDoReportService toDoReportService;
+
         ToDoUser user2 = null;
 
         ITelegramBotClient _botClient;
         Update _update;
 
-        ToDoService toDoService = new ToDoService();
 
 
         int maxtasks = 0;
         int maxline = 0;
         public void HandleUpdateAsync(ITelegramBotClient botClient, Update update)
         {
+            users = new UserService(userRepository);
+            toDoService = new ToDoService(toDoRepository);
             _botClient = botClient;
             _update = update;
+
+
             while (true)
             {
                 try
@@ -125,6 +133,50 @@ namespace InteractiveСonsole
                     return false;
                 case "/exit":
                     return true; //Обработка команды exid
+                case "/report":
+                    if (string.IsNullOrWhiteSpace(name))
+                    {
+                        _botClient.SendMessage(_update.Message.Chat, "Команда не распознана");
+                        return false;
+                    }
+                    else 
+                    {
+                        toDoReportService = new ToDoReportService(toDoRepository);
+                        var report = toDoReportService.GetUserStats(user2.UserId);
+                        _botClient.SendMessage(_update.Message.Chat, $"Статистика по задачам на {report.generatedAt}. Всего: {report.total}; Завершено {report.completed}; Активных: {report.active};");
+                        return false;
+                    }
+                case string command when command.StartsWith("/find"):
+                    if (string.IsNullOrWhiteSpace(name))
+                    {
+                        _botClient.SendMessage(_update.Message.Chat, "Команда не распознана");
+                        return false;
+                    }
+                    else
+                    {
+                        List<string> parts_1 = new List<string>();
+                        parts_1.AddRange(command.Split(' ', 2)); //Разделение строки по пробелу после команды
+                        parts_1.Add(" ");
+                        ValidateString(parts_1[1]);
+                        string task_2 = parts_1[1].Trim(); //Используем только вторую часть команды
+                        var taski = toDoService.Find(user2, task_2);
+
+                        int i = 1;
+                        if (taski != null)
+                        {
+                            _botClient.SendMessage(_update.Message.Chat, "Ваш список задач:");
+                            foreach (var tasks in taski)
+                            {
+                                _botClient.SendMessage(_update.Message.Chat, $"Задача {i++}:{tasks.Name} - {tasks.CreateAt} - {tasks.Id}");
+                            }
+                        }
+                        else
+                        {
+                            _botClient.SendMessage(_update.Message.Chat, $"Список задач пуст!");
+                        }
+
+                        return false;
+                    }
                 case string command when command.StartsWith("/addtask"):
                     if (string.IsNullOrWhiteSpace(name))
                     {
@@ -280,8 +332,8 @@ namespace InteractiveСonsole
             }
         }
 
-        string Help { get; set; } = "Просто вводи команды\n/start, /help, /info, /exit.\nЕсли авторизовался, то вводи команду /addtask, /showtasks, /remowetask (фрмат ввода '№ задачи'), /completetask (фрмат ввода 'команда id задачи'), /showalltasks\nУдачи!!!!!";
-        string Info { get; set; } = "Версия: 2\nДата создания: 14.11.2025\nДата обновления: 11.01.2026";
+        string Help { get; set; } = "Просто вводи команды\n/start, /help, /info, /exit.\nЕсли авторизовался, то вводи команду /addtask, /showtasks, /remowetask (фрмат ввода '№ задачи'), /completetask (фрмат ввода 'команда id задачи'), /showalltasks, /find (вводи часть задачи и получай список задач начинающийся на данное слово), /report (вывод статистики)\nУдачи!!!!!";
+        string Info { get; set; } = "Версия: 2\nДата создания: 14.11.2025\nДата обновления: 29.01.2026";
 
     }
 }

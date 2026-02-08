@@ -6,27 +6,28 @@ using System.Linq;
 using System.Reflection.PortableExecutable;
 using System.Text;
 using System.Threading.Tasks;
+using InteractiveСonsole.Project.Core.Exceptions;
 
 namespace InteractiveСonsole
 {
     internal class ToDoService : IToDoService
     {
-        private List<ToDoItem> taskes = new List<ToDoItem>();
+        private readonly  IToDoRepository _toDoRepository;
+
+        public ToDoService(IToDoRepository toDoRepository)
+        {
+            _toDoRepository = toDoRepository;
+        }
 
         public int maxtasks;
         public int maxline;
-
-        public ToDoService()
-        {
-            taskes = new List<ToDoItem>();
-        }
 
         /// <summary>
         /// Метод добавление задачи
         /// </summary>
         public ToDoItem Add(ToDoUser user, string name)
         {
-            var task = taskes.Where(x => x.User == user).ToList();
+            var task = _toDoRepository.GetAllByUserId(user.UserId);
 
             if (task.Count > maxtasks - 1)
             {
@@ -38,15 +39,16 @@ namespace InteractiveСonsole
                 throw new TaskLengthLimitException(name.Length, maxline);
             }
 
-            if (task.FirstOrDefault(x => x.Name == name) != null)
+            if (_toDoRepository.ExistsByName(user.UserId, name))
             {
                 throw new DublicateTaskException(name);
             }
 
             else
             {
-                taskes.Add(new ToDoItem(user, name));
-                return taskes[taskes.Count-1];
+                var newTask = new ToDoItem(user, name);
+                _toDoRepository.Add(newTask);
+                return newTask;
             }
         }
         /// <summary>
@@ -54,11 +56,7 @@ namespace InteractiveСonsole
         /// </summary>
         public void Delete(Guid id)
         {
-            var zadacha = taskes.FirstOrDefault(x => x.Id == id);
-            if (zadacha != null)
-            {
-                taskes.Remove(zadacha);
-            }
+            _toDoRepository.Delete(id);
             
         }
         /// <summary>
@@ -66,7 +64,7 @@ namespace InteractiveСonsole
         /// </summary>
         public IReadOnlyList<ToDoItem> GetActiveByUserId(Guid userId)
         {
-            var task = taskes.Where(x => x.User.UserId == userId && x.State == ToDoItemState.Active).OrderByDescending(x => x.Name).ToList();
+            var task = _toDoRepository.GetActiveByUserId(userId);
             if (task.Count == 0)
             {
                 return null;
@@ -81,7 +79,7 @@ namespace InteractiveСonsole
         /// </summary>
         public IReadOnlyList<ToDoItem> GetAllByUserId(Guid userId)
         {
-            var task = taskes.Where(x => x.User.UserId == userId).OrderByDescending(x => x.Name).ToList();
+            var task = _toDoRepository.GetAllByUserId(userId);
             if (task.Count == 0)
             {
                 return null;
@@ -96,11 +94,18 @@ namespace InteractiveСonsole
         /// </summary>
         public void MarkCompleted(Guid id)
         {
-            var zadacha = taskes.FirstOrDefault(x => x.Id == id);
+            var zadacha = _toDoRepository.Get(id);
             if (zadacha != null)
             {
                 zadacha.ChangeState(ToDoItemState.Completed);
             }
+        }
+        /// <summary>
+        /// Вывод задач по части слова
+        /// </summary>
+        public IReadOnlyList<ToDoItem> Find(ToDoUser user, string namePrefix)
+        {
+            return _toDoRepository.Find(user.UserId, x => x.Name.StartsWith(namePrefix));
         }
     }
 }
