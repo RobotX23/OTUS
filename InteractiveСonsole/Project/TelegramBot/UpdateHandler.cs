@@ -1,89 +1,139 @@
-﻿using Otus.ToDoList.ConsoleBot;
+﻿using InteractiveСonsole.Project.Core.Exceptions;
+using Otus.ToDoList.ConsoleBot;
 using Otus.ToDoList.ConsoleBot.Types;
-using InteractiveСonsole.Project.Core.Exceptions;
+using System.Reflection.Metadata.Ecma335;
+using System.Reflection.PortableExecutable;
 
 
 namespace InteractiveСonsole
 {
     internal class UpdateHandler : IUpdateHandler
     {
+        private int maxtasks = 0;
+        private int maxline = 0;
 
-        string? name = null;
-        InMemoryUserRepository userRepository = new InMemoryUserRepository();
-        InMemoryToDoRepository toDoRepository = new InMemoryToDoRepository();
-        UserService users;
-        ToDoService toDoService;
-        IToDoReportService toDoReportService;
+        private string? name = null;
+        private InMemoryUserRepository userRepository = new InMemoryUserRepository();
+        private InMemoryToDoRepository toDoRepository = new InMemoryToDoRepository();
+        private UserService users;
+        private IToDoReportService toDoReportService;
+        private ToDoService toDoService;    
 
-        ToDoUser user2 = null;
+        private ToDoUser user2 = null;
 
-        ITelegramBotClient _botClient;
-        Update _update;
+        private ITelegramBotClient _botClient;
+        private Update _update;
 
-
-
-        int maxtasks = 0;
-        int maxline = 0;
-        public void HandleUpdateAsync(ITelegramBotClient botClient, Update update)
+        public UpdateHandler()
         {
+            toDoService = new ToDoService(toDoRepository, maxtasks, maxline);
             users = new UserService(userRepository);
-            toDoService = new ToDoService(toDoRepository);
+        }
+
+        bool flag = false;
+        public async Task HandleUpdateAsync(ITelegramBotClient botClient, Update update, CancellationToken ct)
+        {
             _botClient = botClient;
             _update = update;
-
-
             while (true)
             {
                 try
                 {
+                    var taskline = await toDoService.LineTasks();
+                    int maxtasks = taskline.Item1;
+                    int maxline = taskline.Item2;
                     if (maxtasks == 0)
                     {
-                        _botClient.SendMessage(_update.Message.Chat, "Введите максимальное допустимое количество задач: ");
-                        string? imput = Console.ReadLine();
-                        maxtasks = ParseAndValidatelnt(imput, 1, 100);
-                        _botClient.SendMessage(_update.Message.Chat, $"Вы ввели: {maxtasks} количество задач.");
+                        if (flag == false)
+                        {
+                            await _botClient.SendMessage(_update.Message.Chat, "Введите максимальное допустимое количество задач: ", ct);
+                            flag = true;
+                            break;
+                        }
+                        flag = false;
+                        maxtasks = ParseAndValidatelnt(_update.Message.Text, 1, 100);
+                        await _botClient.SendMessage(_update.Message.Chat, $"Вы ввели: {maxtasks} количество задач.", ct);
                         toDoService.maxtasks = maxtasks;
                     }
 
                     if (maxline == 0)
                     {
-                        _botClient.SendMessage(_update.Message.Chat, "Введите максимальную длинну задач: ");
-                        string? imput_text = Console.ReadLine();
-                        maxline = ParseAndValidatelnt(imput_text, 1, 100);
-                        _botClient.SendMessage(_update.Message.Chat, $"Вы введи: {maxline} длинну задачи.");
+                        if (flag == false)
+                        {
+                            await _botClient.SendMessage(_update.Message.Chat, "Введите максимальную длинну задач: ", ct);
+                            flag = true;
+                            break;
+                        }
+                        flag = false;
+                        maxline = ParseAndValidatelnt(_update.Message.Text, 1, 100);
+                        await _botClient.SendMessage(_update.Message.Chat, $"Вы введи: {maxline} длинну задачи.", ct);
                         toDoService.maxline = maxline;
                         if (name == null)
-                            _botClient.SendMessage(_update.Message.Chat, "Привет!\nВведи следующие команды\n/start, /help, /info, /exit.");
-                    }
+                        {
+                            if (flag == false)
+                            {
+                                await _botClient.SendMessage(_update.Message.Chat, "Привет!\nВведи следующие команды\n/start, /help, /info, /exit.", ct);
+                                flag = true;
+                                break;
+                            }
+                            flag = false;
 
-                    if (Returne(Console.ReadLine()))
+                        }
+                    }
+                    string? text = _update.Message.Text;
+                    if( await Returne(text, ct))
+                    {
+                        name = null;
+                        user2 = null;
+                        await _botClient.SendMessage(_update.Message.Chat, "Вы вышли из сессии. Для продолжения введите /start", ct);
+                    }
+                    else
                     {
                         break;
                     }
+                    
+                    
+
 
                 }
                 catch (TaskCountLimitException ex)
                 {
-                    _botClient.SendMessage(_update.Message.Chat, ex.Message);
+                    HandleErrorAsync(_botClient, ex, ct);
+                    await _botClient.SendMessage(_update.Message.Chat, ex.Message, ct);
+                    break;
+
                 }
                 catch (TaskLengthLimitException ex)
                 {
-                    _botClient.SendMessage(_update.Message.Chat, ex.Message);
+                    HandleErrorAsync(_botClient, ex, ct);
+                    await _botClient.SendMessage(_update.Message.Chat, ex.Message, ct);
+                    break;
                 }
                 catch (DublicateTaskException ex)
                 {
-                    _botClient.SendMessage(_update.Message.Chat, ex.Message);
+                    HandleErrorAsync(_botClient, ex, ct);
+                    await _botClient.SendMessage(_update.Message.Chat, ex.Message, ct);
+                    break;
                 }
                 catch (FormatException)
                 {
-                    _botClient.SendMessage(_update.Message.Chat, "Ошибка: вы ввели не корректное число.");
+                    Exception myEx = new Exception("Ошибка: вы ввели не корректное число.");
+                    HandleErrorAsync(_botClient, myEx, ct);
+                    await _botClient.SendMessage(_update.Message.Chat, "Ошибка: вы ввели не корректное число.", ct);
+                    flag = true;
+                    break;
                 }
                 catch (ArgumentException ex)
                 {
-                    _botClient.SendMessage(_update.Message.Chat, ex.Message);
+                    HandleErrorAsync(_botClient, ex, ct);
+                    await _botClient.SendMessage(_update.Message.Chat, ex.Message, ct);
+                    break;
                 }
             }
         }
+            
+            
+        
         int ParseAndValidatelnt(string? str, int min, int max)
         {
             if (!int.TryParse(str, out int result))
@@ -102,7 +152,7 @@ namespace InteractiveСonsole
         /// <summary>
         /// Основной метод работы алгоритма
         /// </summary>
-        bool Returne(string? text)
+        async Task<bool> Returne(string? text, CancellationToken ct)
         {
             switch (text)
             {
@@ -112,44 +162,44 @@ namespace InteractiveСonsole
                     long userId = user.Id;
                     string userName = user.Username;
 
-                    if(users.GetUser(userId) == null)
+                    if(await users.GetUser(userId) == null)
                     {
-                        user2 = users.RegisterUser(userId, userName);
+                        user2 = await users.RegisterUser(userId, userName);
                         name =  user2.TelegramUserName;
                     }
                     else
                     {
-                        user2 = users.GetUser(userId);
+                        user2 = await users.GetUser(userId);
                         name = user2.TelegramUserName;
                     }
-                    NameVerification("Не получилось определить имя чата", name);
+                    NameVerification("Не получилось определить имя чата", name, ct);
 
                         return false;
                 case "/help": //Обработка команды help
-                    NameVerification(Help, name);
+                    NameVerification(Help, name, ct);
                     return false;
                 case "/info": //Обработка команды info
-                    NameVerification(Info, name);
+                    NameVerification(Info, name, ct);
                     return false;
                 case "/exit":
                     return true; //Обработка команды exid
                 case "/report":
                     if (string.IsNullOrWhiteSpace(name))
                     {
-                        _botClient.SendMessage(_update.Message.Chat, "Команда не распознана");
+                        await _botClient.SendMessage(_update.Message.Chat, "Команда не распознана", ct);
                         return false;
                     }
                     else 
                     {
                         toDoReportService = new ToDoReportService(toDoRepository);
-                        var report = toDoReportService.GetUserStats(user2.UserId);
-                        _botClient.SendMessage(_update.Message.Chat, $"Статистика по задачам на {report.generatedAt}. Всего: {report.total}; Завершено {report.completed}; Активных: {report.active};");
+                        var report = await toDoReportService.GetUserStats(user2.UserId);
+                        await _botClient.SendMessage(_update.Message.Chat, $"Статистика по задачам на {report.generatedAt}. Всего: {report.total}; Завершено {report.completed}; Активных: {report.active};", ct);
                         return false;
                     }
                 case string command when command.StartsWith("/find"):
                     if (string.IsNullOrWhiteSpace(name))
                     {
-                        _botClient.SendMessage(_update.Message.Chat, "Команда не распознана");
+                        await _botClient.SendMessage(_update.Message.Chat, "Команда не распознана", ct);
                         return false;
                     }
                     else
@@ -159,20 +209,20 @@ namespace InteractiveСonsole
                         parts_1.Add(" ");
                         ValidateString(parts_1[1]);
                         string task_2 = parts_1[1].Trim(); //Используем только вторую часть команды
-                        var taski = toDoService.Find(user2, task_2);
+                        var taski = await toDoService.Find(user2, task_2);
 
                         int i = 1;
                         if (taski != null)
                         {
-                            _botClient.SendMessage(_update.Message.Chat, "Ваш список задач:");
+                            await _botClient.SendMessage(_update.Message.Chat, "Ваш список задач:", ct);
                             foreach (var tasks in taski)
                             {
-                                _botClient.SendMessage(_update.Message.Chat, $"Задача {i++}:{tasks.Name} - {tasks.CreateAt} - {tasks.Id}");
+                                await _botClient.SendMessage(_update.Message.Chat, $"Задача {i++}:{tasks.Name} - {tasks.CreateAt} - {tasks.Id}", ct);
                             }
                         }
                         else
                         {
-                            _botClient.SendMessage(_update.Message.Chat, $"Список задач пуст!");
+                            await _botClient.SendMessage(_update.Message.Chat, $"Список задач пуст!", ct);
                         }
 
                         return false;
@@ -180,7 +230,7 @@ namespace InteractiveСonsole
                 case string command when command.StartsWith("/addtask"):
                     if (string.IsNullOrWhiteSpace(name))
                     {
-                        _botClient.SendMessage(_update.Message.Chat, "Команда не распознана");
+                        await _botClient.SendMessage(_update.Message.Chat, "Команда не распознана", ct);
                         return false;
                     }
                     else
@@ -190,32 +240,32 @@ namespace InteractiveСonsole
                         parts_1.Add(" ");
                         ValidateString(parts_1[1]);
                         string task_2 = parts_1[1].Trim(); //Используем только вторую часть команды
-                        var task_1 =toDoService.Add(user2, task_2); // Вызов переданного метода
-                        _botClient.SendMessage(_update.Message.Chat, $"Задача \"{task_1.Name}\" успешно добавлена");
+                        var task_1 =await toDoService.Add(user2, task_2); // Вызов переданного метода
+                        await _botClient.SendMessage(_update.Message.Chat, $"Задача \"{task_1.Name}\" успешно добавлена", ct);
                         return false;
                     }
                 case "/showtasks":
                     if (string.IsNullOrWhiteSpace(name))
                     {
-                        _botClient.SendMessage(_update.Message.Chat, "Команда не распознана");
+                        await _botClient.SendMessage(_update.Message.Chat, "Команда не распознана", ct);
                         return false;
                     }
                     else
                     {
-                        var taski = toDoService.GetActiveByUserId(user2.UserId); // Вызов переданного метода
+                        var taski = await toDoService.GetActiveByUserId(user2.UserId); // Вызов переданного метода
 
                         int i = 1;
                         if (taski != null)
                         {
-                            _botClient.SendMessage(_update.Message.Chat, "Ваш список задач:");
+                            await _botClient.SendMessage(_update.Message.Chat, "Ваш список задач:", ct);
                             foreach (var tasks in taski)
                             {
-                                _botClient.SendMessage(_update.Message.Chat, $"Задача {i++}:{tasks.Name} - {tasks.CreateAt} - {tasks.Id}");
+                                await _botClient.SendMessage(_update.Message.Chat, $"Задача {i++}:{tasks.Name} - {tasks.CreateAt} - {tasks.Id}", ct);
                             }
                         }
                         else
                         {
-                            _botClient.SendMessage(_update.Message.Chat, $"Список задач пуст!");
+                            await _botClient.SendMessage(_update.Message.Chat, $"Список задач пуст!", ct);
                         }
 
                         return false;
@@ -223,7 +273,7 @@ namespace InteractiveСonsole
                 case string command when command.StartsWith("/remowetask"):
                     if (string.IsNullOrWhiteSpace(name))
                     {
-                        _botClient.SendMessage(_update.Message.Chat, "Команда не распознана");
+                        await _botClient.SendMessage(_update.Message.Chat, "Команда не распознана", ct);
                         return false;
                     }
                     else
@@ -234,7 +284,7 @@ namespace InteractiveСonsole
                         ValidateString(parts[1]);
                         string number = parts[1].Trim(); //Используем только вторую часть команды
 
-                        var taskess = toDoService.GetAllByUserId(user2.UserId);
+                        var taskess = await toDoService.GetAllByUserId(user2.UserId);
 
 
                         int numberr;
@@ -244,16 +294,16 @@ namespace InteractiveСonsole
                             {
                                 var scan_task = taskess[Convert.ToInt32(number) - 1];
                                 toDoService.Delete(scan_task.Id); // Вызов переданного метода
-                                _botClient.SendMessage(_update.Message.Chat, $"Задача - {scan_task.Name} удалена!");
+                                await _botClient.SendMessage(_update.Message.Chat, $"Задача - {scan_task.Name} удалена!", ct);
                             }
                             else
                             {
-                                _botClient.SendMessage(_update.Message.Chat, "Ошибка: введено не корректнок число.");
+                                await _botClient.SendMessage(_update.Message.Chat, "Ошибка: введено не корректнок число.", ct);
                             }
                         }
                         else
                         {
-                            _botClient.SendMessage(_update.Message.Chat, "Ошибка: введено не число.");
+                            await _botClient.SendMessage(_update.Message.Chat, "Ошибка: введено не число.", ct);
                         }
 
                         return false;
@@ -262,7 +312,7 @@ namespace InteractiveСonsole
                 case string command when command.StartsWith("/completetask"):
                     if (string.IsNullOrWhiteSpace(name))
                     {
-                        _botClient.SendMessage(_update.Message.Chat, "Команда не распознана");
+                        await _botClient.SendMessage(_update.Message.Chat, "Команда не распознана", ct);
                         return false;
                     }
                     else
@@ -273,37 +323,37 @@ namespace InteractiveСonsole
                         ValidateString(parts[1]);
                         Guid id = Guid.Parse(parts[1].Trim()); //Используем только вторую часть команды
                         toDoService.MarkCompleted(id); // Вызов переданного метода
-                        _botClient.SendMessage(_update.Message.Chat, $"Задача - {parts[1].Trim()} завершена!");
+                        await _botClient.SendMessage(_update.Message.Chat, $"Задача - {parts[1].Trim()} завершена!", ct);
                         return false;
                     }
                 case "/showalltasks":
                     if (string.IsNullOrWhiteSpace(name))
                     {
-                        _botClient.SendMessage(_update.Message.Chat, "Команда не распознана");
+                        await _botClient.SendMessage(_update.Message.Chat, "Команда не распознана", ct);
                         return false;
                     }
                     else
                     {
-                        var taski = toDoService.GetAllByUserId(user2.UserId); // Вызов переданного метода
+                        var taski = await toDoService.GetAllByUserId(user2.UserId); // Вызов переданного метода
 
                         int i = 1;
                         if (taski != null)
                         {
-                            _botClient.SendMessage(_update.Message.Chat, "Ваш список задач:");
+                            await _botClient.SendMessage(_update.Message.Chat, "Ваш список задач:", ct);
                             foreach (var tasks in taski)
                             {
-                                _botClient.SendMessage(_update.Message.Chat, $"Задача {i++}:({tasks.State}) {tasks.Name} - {tasks.CreateAt} - {tasks.Id}");
+                                await _botClient.SendMessage(_update.Message.Chat, $"Задача {i++}:({tasks.State}) {tasks.Name} - {tasks.CreateAt} - {tasks.Id}", ct);
                             }
                         }
                         else
                         {
-                            _botClient.SendMessage(_update.Message.Chat, $"Список задач пуст!");
+                            await _botClient.SendMessage(_update.Message.Chat, $"Список задач пуст!", ct);
                         }
 
                         return false;
                     }
                 default: //если команды не распозднаны то выводим сообщение
-                    _botClient.SendMessage(_update.Message.Chat, "Команда не распознана");
+                    await _botClient.SendMessage(_update.Message.Chat, "Команда не распознана", ct);
                     return false;
             }
         }
@@ -311,16 +361,16 @@ namespace InteractiveСonsole
         /// <summary>
         /// Метод который определяет авторизован пользователь и выводит преведственное сообщение
         /// </summary>
-        void NameVerification(string massege, string? name)
+        async Task NameVerification(string massege, string? name, CancellationToken ct)
         {
             if (!string.IsNullOrWhiteSpace(name))
             {
-                _botClient.SendMessage(_update.Message.Chat, $"Приветствую: {name}");
-                _botClient.SendMessage(_update.Message.Chat, massege);
+                await _botClient.SendMessage(_update.Message.Chat, $"Приветствую: {name}", ct);
+                await _botClient.SendMessage(_update.Message.Chat, massege, ct);
             }
             else
             {
-                _botClient.SendMessage(_update.Message.Chat, massege);
+                await _botClient.SendMessage(_update.Message.Chat, massege, ct);
             }
         }
 
@@ -331,6 +381,13 @@ namespace InteractiveСonsole
                 throw new ArgumentException("Строка не может быть пустой, null или содержать только пробелы.");
             }
         }
+
+        public Task HandleErrorAsync(ITelegramBotClient botClient, Exception exception, CancellationToken ct)
+        {
+            Console.WriteLine($"HandleError: {exception})");
+            return Task.CompletedTask;
+        }
+
 
         string Help { get; set; } = "Просто вводи команды\n/start, /help, /info, /exit.\nЕсли авторизовался, то вводи команду /addtask, /showtasks, /remowetask (фрмат ввода '№ задачи'), /completetask (фрмат ввода 'команда id задачи'), /showalltasks, /find (вводи часть задачи и получай список задач начинающийся на данное слово), /report (вывод статистики)\nУдачи!!!!!";
         string Info { get; set; } = "Версия: 2\nДата создания: 14.11.2025\nДата обновления: 29.01.2026";

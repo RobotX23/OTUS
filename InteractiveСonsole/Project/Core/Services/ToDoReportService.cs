@@ -17,11 +17,13 @@ namespace InteractiveСonsole
         /// <summary>
         /// Метод вывода сервисного отчета
         /// </summary>
-        public (int total, int completed, int active, DateTime generatedAt) GetUserStats(Guid userId)
+        public async Task<(int total, int completed, int active, DateTime generatedAt)> GetUserStats(Guid userId)
         {
-            int total = _toDoRepository.GetAllByUserId(userId).Count;
-            int completed = _toDoRepository.GetAllByUserId(userId).Where(x=> x.State == ToDoItemState.Completed).ToList().Count;
-            int active = _toDoRepository.GetActiveByUserId(userId).Count;
+
+            var allItem = await _toDoRepository.GetAllByUserId(userId);
+            int total = allItem.Count;
+            int completed = allItem.Where(x=> x.State == ToDoItemState.Completed).ToList().Count;
+            int active = allItem.Count;
             DateTime generatedAt = DateTime.UtcNow;
             return (total, completed, active, generatedAt);
 

@@ -8,8 +8,8 @@ namespace InteractiveСonsole
 {
     public interface IUserService
     {
-        ToDoUser RegisterUser(long telegramUserId, string telegrsmUserName);
-        ToDoUser? GetUser(long telegramUserId);
+        Task <ToDoUser> RegisterUser(long telegramUserId, string telegrsmUserName);
+        Task <ToDoUser?> GetUser(long telegramUserId);
 
     }
 }

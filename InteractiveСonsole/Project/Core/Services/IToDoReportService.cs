@@ -9,6 +9,6 @@ namespace InteractiveСonsole
     internal interface IToDoReportService
     {
         //Вывод сервисного отчёта
-        (int total, int completed, int active, DateTime generatedAt) GetUserStats(Guid userId);
+        Task<(int total, int completed, int active, DateTime generatedAt)> GetUserStats(Guid userId);
     }
 }

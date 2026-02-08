@@ -8,11 +8,11 @@ namespace InteractiveСonsole
 {
     public interface IToDoService
     {
-        IReadOnlyList<ToDoItem> GetAllByUserId(Guid userId);
-        IReadOnlyList<ToDoItem> GetActiveByUserId(Guid userId);
-        ToDoItem Add(ToDoUser user, string name);
-        void MarkCompleted(Guid id);
-        void Delete (Guid id);
-        IReadOnlyList<ToDoItem> Find(ToDoUser user, string namePrefix);
+        Task<IReadOnlyList<ToDoItem>> GetAllByUserId(Guid userId);
+        Task<IReadOnlyList<ToDoItem>> GetActiveByUserId(Guid userId);
+        Task<ToDoItem> Add(ToDoUser user, string name);
+        Task MarkCompleted(Guid id);
+        Task Delete (Guid id);
+        Task<IReadOnlyList<ToDoItem>> Find(ToDoUser user, string namePrefix);
     }
 }
