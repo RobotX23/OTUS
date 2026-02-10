@@ -8,7 +8,7 @@ namespace InteractiveСonsole
 {
     public interface IUserService
     {
-        Task <ToDoUser> RegisterUser(long telegramUserId, string telegrsmUserName);
+        Task <ToDoUser> RegisterUser(long telegramUserId, string? telegrsmUserName);
         Task <ToDoUser?> GetUser(long telegramUserId);
 
     }

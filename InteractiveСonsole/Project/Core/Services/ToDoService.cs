@@ -18,7 +18,7 @@ namespace InteractiveСonsole
 
         public async Task<(int, int)> LineTasks()
         {
-            return (maxtasks, maxline);
+            return await Task.FromResult( (maxtasks, maxline));
         }
 
 

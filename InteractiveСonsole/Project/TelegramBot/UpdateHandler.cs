@@ -10,26 +10,25 @@ namespace InteractiveСonsole
     internal class UpdateHandler : IUpdateHandler
     {
         private string? name = null;
-        private ToDoUser user2;
-        private ITelegramBotClient _botClient;
+        private ToDoUser? user2;
         private Update _update;
 
-
+        private readonly ITelegramBotClient _botClient;
         private readonly IToDoService _toDoService;
         private readonly IUserService _userService;
         private readonly IToDoRepository _toDoRepository;
 
-        public UpdateHandler(IToDoService toDoService, IUserService userService, IToDoRepository toDoRepository)
+        public UpdateHandler(IToDoService toDoService, IUserService userService, IToDoRepository toDoRepository, ITelegramBotClient botClient)
         {
             _toDoService = toDoService ?? throw new ArgumentNullException(nameof(toDoService));
             _userService = userService ?? throw new ArgumentNullException(nameof(userService));
             _toDoRepository = toDoRepository ?? throw new ArgumentNullException(nameof(toDoRepository));
+            _botClient = botClient;
         }
 
         bool flag = false;
         public async Task HandleUpdateAsync(ITelegramBotClient botClient, Update update, CancellationToken ct)
         {
-            _botClient = botClient;
             _update = update;
             while (true)
             {
@@ -94,34 +93,34 @@ namespace InteractiveСonsole
                 }
                 catch (TaskCountLimitException ex)
                 {
-                    HandleErrorAsync(_botClient, ex, ct);
+                    await Task.FromResult(HandleErrorAsync(_botClient, ex, ct));
                     await _botClient.SendMessage(_update.Message.Chat, ex.Message, ct);
                     break;
 
                 }
                 catch (TaskLengthLimitException ex)
                 {
-                    HandleErrorAsync(_botClient, ex, ct);
+                    await HandleErrorAsync(_botClient, ex, ct);
                     await _botClient.SendMessage(_update.Message.Chat, ex.Message, ct);
                     break;
                 }
                 catch (DublicateTaskException ex)
                 {
-                    HandleErrorAsync(_botClient, ex, ct);
+                    await HandleErrorAsync(_botClient, ex, ct);
                     await _botClient.SendMessage(_update.Message.Chat, ex.Message, ct);
                     break;
                 }
                 catch (FormatException)
                 {
                     Exception myEx = new Exception("Ошибка: вы ввели не корректное число.");
-                    HandleErrorAsync(_botClient, myEx, ct);
+                    await HandleErrorAsync(_botClient, myEx, ct);
                     await _botClient.SendMessage(_update.Message.Chat, "Ошибка: вы ввели не корректное число.", ct);
                     flag = true;
                     break;
                 }
                 catch (ArgumentException ex)
                 {
-                    HandleErrorAsync(_botClient, ex, ct);
+                    await HandleErrorAsync(_botClient, ex, ct);
                     await _botClient.SendMessage(_update.Message.Chat, ex.Message, ct);
                     break;
                 }
@@ -156,7 +155,7 @@ namespace InteractiveСonsole
 
                     var user = _update.Message.From;
                     long userId = user.Id;
-                    string userName = user.Username;
+                    string? userName = user.Username;
 
                     if(await _userService.GetUser(userId) == null)
                     {
@@ -166,16 +165,16 @@ namespace InteractiveСonsole
                     else
                     {
                         user2 = await _userService.GetUser(userId);
-                        name = user2.TelegramUserName;
+                        name = user2?.TelegramUserName;
                     }
-                    NameVerification("Не получилось определить имя чата", name, ct);
+                    await NameVerification("Не получилось определить имя чата", name, ct);
 
                         return false;
                 case "/help": //Обработка команды help
-                    NameVerification(Help, name, ct);
+                    await NameVerification(Help, name, ct);
                     return false;
                 case "/info": //Обработка команды info
-                    NameVerification(Info, name, ct);
+                    await NameVerification(Info, name, ct);
                     return false;
                 case "/exit":
                     return true; //Обработка команды exid
@@ -290,7 +289,7 @@ namespace InteractiveСonsole
                             if (numberr >= 1 && numberr <= taskess.Count)
                             {
                                 var scan_task = taskess[Convert.ToInt32(number) - 1];
-                                _toDoService.Delete(scan_task.Id); // Вызов переданного метода
+                                await _toDoService.Delete(scan_task.Id); // Вызов переданного метода
                                 await _botClient.SendMessage(_update.Message.Chat, $"Задача - {scan_task.Name} удалена!", ct);
                             }
                             else
@@ -319,7 +318,7 @@ namespace InteractiveСonsole
                         parts.Add(" ");
                         ValidateString(parts[1]);
                         Guid id = Guid.Parse(parts[1].Trim()); //Используем только вторую часть команды
-                        _toDoService.MarkCompleted(id); // Вызов переданного метода
+                        await _toDoService.MarkCompleted(id); // Вызов переданного метода
                         await _botClient.SendMessage(_update.Message.Chat, $"Задача - {parts[1].Trim()} завершена!", ct);
                         return false;
                     }

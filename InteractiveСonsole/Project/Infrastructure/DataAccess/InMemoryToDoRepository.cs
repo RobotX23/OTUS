@@ -15,14 +15,14 @@ namespace InteractiveСonsole
         /// </summary>
         public async Task Add(ToDoItem item)
         {
-            toDoItems.Add(item);
+            await Task.Run(() => toDoItems.Add(item));
         }
         /// <summary>
         /// Количество активных задач пользователя
         /// </summary>
         public async Task<int> CountActive(Guid userId)
         {
-            return toDoItems.Where(x=> x.User.UserId == userId).Count();
+            return await Task.FromResult(toDoItems.Where(x=> x.User.UserId == userId).Count());
         }
 
         public async Task Delete(Guid id)
@@ -40,11 +40,11 @@ namespace InteractiveСonsole
         {
             if (toDoItems.FirstOrDefault(x => x.Name == name && x.User.UserId == userId) != null)
             {
-                return true;
+                return await Task.FromResult(true);
             }
             else
             {
-                return false;
+                return await Task.FromResult(false);
             }
         }
         /// <summary>
@@ -52,7 +52,7 @@ namespace InteractiveСonsole
         /// </summary>
         public async Task<IReadOnlyList<ToDoItem>> Find(Guid userId, Func<ToDoItem, bool> predicate)
         {
-            return toDoItems.Where(x=> x.User.UserId == userId && predicate(x)).ToList();
+            return await Task.FromResult(toDoItems.Where(x => x.User.UserId == userId && predicate(x)).ToList());
         }
 
 
@@ -61,14 +61,14 @@ namespace InteractiveСonsole
         /// </summary>
         public async Task<ToDoItem?> Get(Guid id)
         {
-            return toDoItems.FirstOrDefault(x=> x.Id == id);
+            return await Task.FromResult(toDoItems.FirstOrDefault(x => x.Id == id));
         }
         /// <summary>
         /// Вывод активных задач пользователя
         /// </summary>
         public async Task<IReadOnlyList<ToDoItem>> GetActiveByUserId(Guid userId)
         {
-            return toDoItems.Where(x=> x.User.UserId == userId && x.State == ToDoItemState.Active).ToList();
+            return await Task.FromResult(toDoItems.Where(x => x.User.UserId == userId && x.State == ToDoItemState.Active).ToList());
         }
         /// <summary>
         /// Получить список все задач
@@ -76,7 +76,7 @@ namespace InteractiveСonsole
         public async Task<IReadOnlyList<ToDoItem>> GetAllByUserId(Guid userId)
         {
             var task = toDoItems.Where(x => x.User.UserId == userId).ToList();
-            return task;
+            return await Task.FromResult(task);
         }
         /// <summary>
         /// Изменение задачи

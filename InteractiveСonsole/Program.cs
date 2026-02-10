@@ -11,8 +11,8 @@ try
     var toDoRepository = new InMemoryToDoRepository();
     var toDoService = new ToDoService(toDoRepository, 0, 0);
     var userService = new UserService(userRepository);
-    var handler = new UpdateHandler(toDoService, userService, toDoRepository);
     var botClient = new ConsoleBotClient();
+    var handler = new UpdateHandler(toDoService, userService, toDoRepository, botClient);
     botClient.StartReceiving(handler, ctr.Token);
 
 }
