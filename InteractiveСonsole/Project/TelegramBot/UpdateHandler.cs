@@ -204,11 +204,11 @@ namespace InteractiveСonsole
                     }
                     else
                     {
-                        List<string> parts_1 = new List<string>();
-                        parts_1.AddRange(command.Split(' ', 2)); //Разделение строки по пробелу после команды
-                        parts_1.Add(" ");
-                        ValidateString(parts_1[1]);
-                        string task_2 = parts_1[1].Trim(); //Используем только вторую часть команды
+                        List<string> partOne = new List<string>();
+                        partOne.AddRange(command.Split(' ', 2)); //Разделение строки по пробелу после команды
+                        partOne.Add(" ");
+                        ValidateString(partOne[1]);
+                        string task_2 = partOne[1].Trim(); //Используем только вторую часть команды
                         var taski = await toDoService.Find(user2, task_2);
 
                         int i = 1;
@@ -235,11 +235,11 @@ namespace InteractiveСonsole
                     }
                     else
                     {
-                        List<string> parts_1 = new List<string>();
-                        parts_1.AddRange(command.Split(' ', 2)); //Разделение строки по пробелу после команды
-                        parts_1.Add(" ");
-                        ValidateString(parts_1[1]);
-                        string task_2 = parts_1[1].Trim(); //Используем только вторую часть команды
+                        List<string> partOne = new List<string>();
+                        partOne.AddRange(command.Split(' ', 2)); //Разделение строки по пробелу после команды
+                        partOne.Add(" ");
+                        ValidateString(partOne[1]);
+                        string task_2 = partOne[1].Trim(); //Используем только вторую часть команды
                         var task_1 =await toDoService.Add(user2, task_2); // Вызов переданного метода
                         await _botClient.SendMessage(_update.Message.Chat, $"Задача \"{task_1.Name}\" успешно добавлена", ct);
                         return false;
