@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection.PortableExecutable;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -14,5 +15,10 @@ namespace InteractiveСonsole
         Task MarkCompleted(Guid id);
         Task Delete (Guid id);
         Task<IReadOnlyList<ToDoItem>> Find(ToDoUser user, string namePrefix);
+
+        Task<(int maxtasks, int maxline)> LineTasks();
+
+        public int maxtasks { get; set; }
+        public int maxline { get; set; }
     }
 }

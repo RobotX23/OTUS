@@ -6,7 +6,12 @@ using Otus.ToDoList.ConsoleBot;
 try
 {
     using var ctr = new CancellationTokenSource();
-    var handler = new UpdateHandler();
+
+    var userRepository = new InMemoryUserRepository();
+    var toDoRepository = new InMemoryToDoRepository();
+    var toDoService = new ToDoService(toDoRepository, 0, 0);
+    var userService = new UserService(userRepository);
+    var handler = new UpdateHandler(toDoService, userService, toDoRepository);
     var botClient = new ConsoleBotClient();
     botClient.StartReceiving(handler, ctr.Token);
 

@@ -9,25 +9,21 @@ namespace InteractiveСonsole
 {
     internal class UpdateHandler : IUpdateHandler
     {
-        private int maxtasks = 0;
-        private int maxline = 0;
-
         private string? name = null;
-        private InMemoryUserRepository userRepository = new InMemoryUserRepository();
-        private InMemoryToDoRepository toDoRepository = new InMemoryToDoRepository();
-        private UserService users;
-        private IToDoReportService toDoReportService;
-        private ToDoService toDoService;    
-
-        private ToDoUser user2 = null;
-
+        private ToDoUser user2;
         private ITelegramBotClient _botClient;
         private Update _update;
 
-        public UpdateHandler()
+
+        private readonly IToDoService _toDoService;
+        private readonly IUserService _userService;
+        private readonly IToDoRepository _toDoRepository;
+
+        public UpdateHandler(IToDoService toDoService, IUserService userService, IToDoRepository toDoRepository)
         {
-            toDoService = new ToDoService(toDoRepository, maxtasks, maxline);
-            users = new UserService(userRepository);
+            _toDoService = toDoService ?? throw new ArgumentNullException(nameof(toDoService));
+            _userService = userService ?? throw new ArgumentNullException(nameof(userService));
+            _toDoRepository = toDoRepository ?? throw new ArgumentNullException(nameof(toDoRepository));
         }
 
         bool flag = false;
@@ -39,7 +35,7 @@ namespace InteractiveСonsole
             {
                 try
                 {
-                    var taskline = await toDoService.LineTasks();
+                    var taskline = await _toDoService.LineTasks();
                     int maxtasks = taskline.Item1;
                     int maxline = taskline.Item2;
                     if (maxtasks == 0)
@@ -53,7 +49,7 @@ namespace InteractiveСonsole
                         flag = false;
                         maxtasks = ParseAndValidatelnt(_update.Message.Text, 1, 100);
                         await _botClient.SendMessage(_update.Message.Chat, $"Вы ввели: {maxtasks} количество задач.", ct);
-                        toDoService.maxtasks = maxtasks;
+                        _toDoService.maxtasks = maxtasks;
                     }
 
                     if (maxline == 0)
@@ -67,7 +63,7 @@ namespace InteractiveСonsole
                         flag = false;
                         maxline = ParseAndValidatelnt(_update.Message.Text, 1, 100);
                         await _botClient.SendMessage(_update.Message.Chat, $"Вы введи: {maxline} длинну задачи.", ct);
-                        toDoService.maxline = maxline;
+                        _toDoService.maxline = maxline;
                         if (name == null)
                         {
                             if (flag == false)
@@ -162,14 +158,14 @@ namespace InteractiveСonsole
                     long userId = user.Id;
                     string userName = user.Username;
 
-                    if(await users.GetUser(userId) == null)
+                    if(await _userService.GetUser(userId) == null)
                     {
-                        user2 = await users.RegisterUser(userId, userName);
+                        user2 = await _userService.RegisterUser(userId, userName);
                         name =  user2.TelegramUserName;
                     }
                     else
                     {
-                        user2 = await users.GetUser(userId);
+                        user2 = await _userService.GetUser(userId);
                         name = user2.TelegramUserName;
                     }
                     NameVerification("Не получилось определить имя чата", name, ct);
@@ -191,7 +187,8 @@ namespace InteractiveСonsole
                     }
                     else 
                     {
-                        toDoReportService = new ToDoReportService(toDoRepository);
+
+                        var toDoReportService = new ToDoReportService(_toDoRepository);
                         var report = await toDoReportService.GetUserStats(user2.UserId);
                         await _botClient.SendMessage(_update.Message.Chat, $"Статистика по задачам на {report.generatedAt}. Всего: {report.total}; Завершено {report.completed}; Активных: {report.active};", ct);
                         return false;
@@ -209,7 +206,7 @@ namespace InteractiveСonsole
                         partOne.Add(" ");
                         ValidateString(partOne[1]);
                         string task_2 = partOne[1].Trim(); //Используем только вторую часть команды
-                        var taski = await toDoService.Find(user2, task_2);
+                        var taski = await _toDoService.Find(user2, task_2);
 
                         int i = 1;
                         if (taski != null)
@@ -240,7 +237,7 @@ namespace InteractiveСonsole
                         partOne.Add(" ");
                         ValidateString(partOne[1]);
                         string task_2 = partOne[1].Trim(); //Используем только вторую часть команды
-                        var task_1 =await toDoService.Add(user2, task_2); // Вызов переданного метода
+                        var task_1 =await _toDoService.Add(user2, task_2); // Вызов переданного метода
                         await _botClient.SendMessage(_update.Message.Chat, $"Задача \"{task_1.Name}\" успешно добавлена", ct);
                         return false;
                     }
@@ -252,7 +249,7 @@ namespace InteractiveСonsole
                     }
                     else
                     {
-                        var taski = await toDoService.GetActiveByUserId(user2.UserId); // Вызов переданного метода
+                        var taski = await _toDoService.GetActiveByUserId(user2.UserId); // Вызов переданного метода
 
                         int i = 1;
                         if (taski != null)
@@ -284,7 +281,7 @@ namespace InteractiveСonsole
                         ValidateString(parts[1]);
                         string number = parts[1].Trim(); //Используем только вторую часть команды
 
-                        var taskess = await toDoService.GetAllByUserId(user2.UserId);
+                        var taskess = await _toDoService.GetAllByUserId(user2.UserId);
 
 
                         int numberr;
@@ -293,7 +290,7 @@ namespace InteractiveСonsole
                             if (numberr >= 1 && numberr <= taskess.Count)
                             {
                                 var scan_task = taskess[Convert.ToInt32(number) - 1];
-                                toDoService.Delete(scan_task.Id); // Вызов переданного метода
+                                _toDoService.Delete(scan_task.Id); // Вызов переданного метода
                                 await _botClient.SendMessage(_update.Message.Chat, $"Задача - {scan_task.Name} удалена!", ct);
                             }
                             else
@@ -322,7 +319,7 @@ namespace InteractiveСonsole
                         parts.Add(" ");
                         ValidateString(parts[1]);
                         Guid id = Guid.Parse(parts[1].Trim()); //Используем только вторую часть команды
-                        toDoService.MarkCompleted(id); // Вызов переданного метода
+                        _toDoService.MarkCompleted(id); // Вызов переданного метода
                         await _botClient.SendMessage(_update.Message.Chat, $"Задача - {parts[1].Trim()} завершена!", ct);
                         return false;
                     }
@@ -334,7 +331,7 @@ namespace InteractiveСonsole
                     }
                     else
                     {
-                        var taski = await toDoService.GetAllByUserId(user2.UserId); // Вызов переданного метода
+                        var taski = await _toDoService.GetAllByUserId(user2.UserId); // Вызов переданного метода
 
                         int i = 1;
                         if (taski != null)
