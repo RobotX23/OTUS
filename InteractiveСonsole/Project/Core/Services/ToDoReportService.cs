@@ -23,7 +23,7 @@ namespace InteractiveСonsole
             var allItem = await _toDoRepository.GetAllByUserId(userId);
             int total = allItem.Count;
             int completed = allItem.Where(x=> x.State == ToDoItemState.Completed).ToList().Count;
-            int active = allItem.Count;
+            int active = allItem.Where(x=> x.State == ToDoItemState.Active).ToList().Count;
             DateTime generatedAt = DateTime.UtcNow;
             return (total, completed, active, generatedAt);
 
