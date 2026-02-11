@@ -2,6 +2,7 @@
 using Telegram.Bot;
 using Telegram.Bot.Polling;
 using Telegram.Bot.Types;
+using Telegram.Bot.Types.ReplyMarkups;
 
 
 namespace InteractiveСonsole
@@ -66,6 +67,7 @@ namespace InteractiveСonsole
                         {
                             if (flag == false)
                             {
+                                SendMainMenu(_update.Message.Chat.Id, _botClient);
                                 await _botClient.SendMessage(_update.Message.Chat, "Привет!\nВведи следующие команды\n/start, /help, /info, /exit.");
                                 flag = true;
                                 break;
@@ -151,7 +153,7 @@ namespace InteractiveСonsole
             switch (text)
             {
                 case "/start"://Обработка команды start
-
+                case "Старт":
                     var user = _update.Message.From;
                     long userId = user.Id;
                     string? userName = user.Username;
@@ -167,8 +169,9 @@ namespace InteractiveСonsole
                         name = user2?.TelegramUserName;
                     }
                     await NameVerification("Не получилось определить имя чата", name, ct);
+                    ChangeKeyboard(_update.Message.Chat.Id, _botClient);
 
-                        return false;
+                    return false;
                 case "/help": //Обработка команды help
                     await NameVerification(Help, name, ct);
                     return false;
@@ -178,6 +181,7 @@ namespace InteractiveСonsole
                 case "/exit":
                     return true; //Обработка команды exid
                 case "/report":
+                case "Отчет":
                     if (string.IsNullOrWhiteSpace(name))
                     {
                         await _botClient.SendMessage(_update.Message.Chat, "Команда не распознана");
@@ -212,7 +216,7 @@ namespace InteractiveСonsole
                             await _botClient.SendMessage(_update.Message.Chat, "Ваш список задач:");
                             foreach (var tasks in taski)
                             {
-                                await _botClient.SendMessage(_update.Message.Chat, $"Задача {i++}:{tasks.Name} - {tasks.CreateAt} - {tasks.Id}");
+                                await _botClient.SendMessage(_update.Message.Chat, $"Задача {i++}:{tasks.Name} - {tasks.CreateAt} - '{tasks.Id}'");
                             }
                         }
                         else
@@ -240,6 +244,7 @@ namespace InteractiveСonsole
                         return false;
                     }
                 case "/showtasks":
+                case "Активные задачи":
                     if (string.IsNullOrWhiteSpace(name))
                     {
                         await _botClient.SendMessage(_update.Message.Chat, "Команда не распознана");
@@ -255,7 +260,7 @@ namespace InteractiveСonsole
                             await _botClient.SendMessage(_update.Message.Chat, "Ваш список задач:");
                             foreach (var tasks in taski)
                             {
-                                await _botClient.SendMessage(_update.Message.Chat, $"Задача {i++}:{tasks.Name} - {tasks.CreateAt} - {tasks.Id}");
+                                await _botClient.SendMessage(_update.Message.Chat, $"Задача {i++}:{tasks.Name} - {tasks.CreateAt} - '{tasks.Id}'");
                             }
                         }
                         else
@@ -322,6 +327,7 @@ namespace InteractiveСonsole
                         return false;
                     }
                 case "/showalltasks":
+                case "Все задачи":
                     if (string.IsNullOrWhiteSpace(name))
                     {
                         await _botClient.SendMessage(_update.Message.Chat, "Команда не распознана");
@@ -337,7 +343,7 @@ namespace InteractiveСonsole
                             await _botClient.SendMessage(_update.Message.Chat, "Ваш список задач:");
                             foreach (var tasks in taski)
                             {
-                                await _botClient.SendMessage(_update.Message.Chat, $"Задача {i++}:({tasks.State}) {tasks.Name} - {tasks.CreateAt} - {tasks.Id}");
+                                await _botClient.SendMessage(_update.Message.Chat, $"Задача {i++}:({tasks.State}) {tasks.Name} - {tasks.CreateAt} - '{tasks.Id}'");
                             }
                         }
                         else
@@ -383,6 +389,38 @@ namespace InteractiveСonsole
             Console.WriteLine($"HandleError: {exception})");
             return Task.CompletedTask;
         }
+
+
+
+        private static async Task SendMainMenu(long chatId, ITelegramBotClient botClient)
+        {
+            var replyKeyboard = new ReplyKeyboardMarkup(new[]
+            {
+            new KeyboardButton("Старт"),
+        })
+            {
+                ResizeKeyboard = true
+            };
+
+            await botClient.SendMessage(chatId, "Главное меню:", replyMarkup: replyKeyboard);
+        }
+
+        private static async Task ChangeKeyboard(long chatId, ITelegramBotClient botClient)
+        {
+            var newKeyboard = new ReplyKeyboardMarkup(new[]
+            {
+            new KeyboardButton("Все задачи"),
+            new KeyboardButton("Активные задачи"),
+            new KeyboardButton("Отчет") // Добавим кнопку для возврата на основное меню
+        })
+            {
+                ResizeKeyboard = true
+            };
+
+            await botClient.SendMessage(chatId, "Клавиатура изменена!", replyMarkup: newKeyboard);
+        }
+
+
 
         string Help { get; set; } = "Просто вводи команды\n/start, /help, /info, /exit.\nЕсли авторизовался, то вводи команду /addtask, /showtasks, /remowetask (фрмат ввода '№ задачи'), /completetask (фрмат ввода 'команда id задачи'), /showalltasks, /find (вводи часть задачи и получай список задач начинающийся на данное слово), /report (вывод статистики)\nУдачи!!!!!";
         string Info { get; set; } = "Версия: 2\nДата создания: 14.11.2025\nДата обновления: 29.01.2026";
