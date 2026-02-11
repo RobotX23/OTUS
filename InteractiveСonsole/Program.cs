@@ -22,20 +22,35 @@ try
     var userService = new UserService(userRepository);
     var botClient = new TelegramBotClient(token);
 
-    // Настройка опций получения обновлений
-    var receiverOptions = new ReceiverOptions
-    {
-        AllowedUpdates = [UpdateType.Message], // Укажите необходимые типы обновлений, например, UpdateType.Message
-        DropPendingUpdates = true
-    };
     var handler = new UpdateHandler(toDoService, userService, toDoRepository, botClient);
-    // Начинаем получать обновления
     botClient.StartReceiving(handler);
 
     var me = await botClient.GetMe();
     Console.WriteLine($"{me.FirstName} запущен!");
 
-    await Task.Delay(-1); // Устанавливаем бесконечную задержку
+    var receiverOptions = new ReceiverOptions
+    {
+        AllowedUpdates = [UpdateType.Message], 
+        DropPendingUpdates = true
+    };
+
+    Console.WriteLine("Нажмите клавишу A для выхода");
+
+    // Ожидание нажатия клавиши
+    while (true)
+    {
+        var key = Console.ReadKey(true).Key; // Считываем нажатую клавишу
+        if (key == ConsoleKey.A)
+        {
+            Console.WriteLine("Выход из программы...");
+            ctr.Cancel(); // Отмена всех асинхронных операций
+            break;
+        }
+        else
+        {
+            Console.WriteLine($"Информация о боте: {me.FirstName} (ID: {me.Id})");
+        }
+    }
 
 }
 catch (Exception ex)
