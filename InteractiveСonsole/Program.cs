@@ -1,19 +1,20 @@
 ﻿using InteractiveСonsole;
-using Otus.ToDoList.ConsoleBot;
+using Telegram.Bot;
+
 
 
 
 try
 {
     using var ctr = new CancellationTokenSource();
-
+    string token = Environment.GetEnvironmentVariable("TELEGRAM_BOT_TOKEN_EX1", EnvironmentVariableTarget.User);
     var userRepository = new InMemoryUserRepository();
     var toDoRepository = new InMemoryToDoRepository();
     var toDoService = new ToDoService(toDoRepository, 0, 0);
     var userService = new UserService(userRepository);
-    var botClient = new ConsoleBotClient();
+    var botClient = new TelegramBotClient(token);
     var handler = new UpdateHandler(toDoService, userService, toDoRepository, botClient);
-    botClient.StartReceiving(handler, ctr.Token);
+    botClient.StartReceiving(handler);
 
 }
 catch (Exception ex)
