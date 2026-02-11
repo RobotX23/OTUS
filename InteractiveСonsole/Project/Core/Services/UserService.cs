@@ -19,24 +19,24 @@ namespace InteractiveСonsole
         /// <summary>
         /// Поиск существующего пользователя
         /// </summary>
-        public ToDoUser? GetUser(long telegramUserId)
+        public async Task<ToDoUser?> GetUser(long telegramUserId)
         {
-            return _userRepository.GetUserByTelegramUserId(telegramUserId);
+            return await _userRepository.GetUserByTelegramUserId(telegramUserId);
         }
         /// <summary>
         /// Регистрация пользователя
         /// </summary>
-        public ToDoUser RegisterUser(long telegramUserId, string telegrsmUserName)
+        public async Task<ToDoUser> RegisterUser(long telegramUserId, string telegrsmUserName)
         {
-            var existingUser = _userRepository.GetUserByTelegramUserId(telegramUserId);
+            var existingUser = await _userRepository.GetUserByTelegramUserId(telegramUserId);
             if (existingUser != null)
             {
-                return existingUser;
+                return  existingUser;
             }
 
             var user = new ToDoUser(telegrsmUserName, telegramUserId);
-            _userRepository.Add(user);
-            return user;
+            await _userRepository.Add(user);
+            return await Task.FromResult(user);
             
         }
     }

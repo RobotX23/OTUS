@@ -1,33 +1,34 @@
-﻿using Microsoft.VisualBasic;
-using Otus.ToDoList.ConsoleBot.Types;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Reflection.PortableExecutable;
-using System.Text;
-using System.Threading.Tasks;
-using InteractiveСonsole.Project.Core.Exceptions;
+﻿using InteractiveСonsole.Project.Core.Exceptions;
 
 namespace InteractiveСonsole
 {
     internal class ToDoService : IToDoService
     {
         private readonly  IToDoRepository _toDoRepository;
+        public int maxtasks {  get; set; }
+        public int maxline { get; set; }
 
-        public ToDoService(IToDoRepository toDoRepository)
+        public ToDoService(IToDoRepository toDoRepository, int maxtasks, int maxline)
         {
             _toDoRepository = toDoRepository;
+            this.maxtasks = maxtasks;
+            this.maxline = maxline;
         }
 
-        public int maxtasks;
-        public int maxline;
+
+        public async Task<(int, int)> LineTasks()
+        {
+            return await Task.FromResult( (maxtasks, maxline));
+        }
+
+
 
         /// <summary>
         /// Метод добавление задачи
         /// </summary>
-        public ToDoItem Add(ToDoUser user, string name)
+        public async Task<ToDoItem> Add(ToDoUser user, string name)
         {
-            var task = _toDoRepository.GetAllByUserId(user.UserId);
+            var task = await _toDoRepository.GetAllByUserId(user.UserId);
 
             if (task.Count > maxtasks - 1)
             {
@@ -39,7 +40,7 @@ namespace InteractiveСonsole
                 throw new TaskLengthLimitException(name.Length, maxline);
             }
 
-            if (_toDoRepository.ExistsByName(user.UserId, name))
+            if (await _toDoRepository.ExistsByName(user.UserId, name))
             {
                 throw new DublicateTaskException(name);
             }
@@ -47,24 +48,24 @@ namespace InteractiveСonsole
             else
             {
                 var newTask = new ToDoItem(user, name);
-                _toDoRepository.Add(newTask);
+                await _toDoRepository.Add(newTask);
                 return newTask;
             }
         }
         /// <summary>
         /// Метод удаления задач
         /// </summary>
-        public void Delete(Guid id)
+        public async Task Delete(Guid id)
         {
-            _toDoRepository.Delete(id);
+            await _toDoRepository.Delete(id);
             
         }
         /// <summary>
         /// Метод вывода активных задач
         /// </summary>
-        public IReadOnlyList<ToDoItem> GetActiveByUserId(Guid userId)
+        public async Task<IReadOnlyList<ToDoItem>> GetActiveByUserId(Guid userId)
         {
-            var task = _toDoRepository.GetActiveByUserId(userId);
+            var task = await _toDoRepository.GetActiveByUserId(userId);
             if (task.Count == 0)
             {
                 return null;
@@ -77,9 +78,9 @@ namespace InteractiveСonsole
         /// <summary>
         /// Метод вывода всех задач
         /// </summary>
-        public IReadOnlyList<ToDoItem> GetAllByUserId(Guid userId)
+        public async Task<IReadOnlyList<ToDoItem>> GetAllByUserId(Guid userId)
         {
-            var task = _toDoRepository.GetAllByUserId(userId);
+            var task = await _toDoRepository.GetAllByUserId(userId);
             if (task.Count == 0)
             {
                 return null;
@@ -92,9 +93,9 @@ namespace InteractiveСonsole
         /// <summary>
         /// Завершение задачи
         /// </summary>
-        public void MarkCompleted(Guid id)
+        public async Task MarkCompleted(Guid id)
         {
-            var zadacha = _toDoRepository.Get(id);
+            var zadacha = await _toDoRepository.Get(id);
             if (zadacha != null)
             {
                 zadacha.ChangeState(ToDoItemState.Completed);
@@ -103,9 +104,9 @@ namespace InteractiveСonsole
         /// <summary>
         /// Вывод задач по части слова
         /// </summary>
-        public IReadOnlyList<ToDoItem> Find(ToDoUser user, string namePrefix)
+        public async Task<IReadOnlyList<ToDoItem>> Find(ToDoUser user, string namePrefix)
         {
-            return _toDoRepository.Find(user.UserId, x => x.Name.StartsWith(namePrefix));
+            return await _toDoRepository.Find(user.UserId, x => x.Name.StartsWith(namePrefix));
         }
     }
 }

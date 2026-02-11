@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection.PortableExecutable;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -8,11 +9,16 @@ namespace InteractiveСonsole
 {
     public interface IToDoService
     {
-        IReadOnlyList<ToDoItem> GetAllByUserId(Guid userId);
-        IReadOnlyList<ToDoItem> GetActiveByUserId(Guid userId);
-        ToDoItem Add(ToDoUser user, string name);
-        void MarkCompleted(Guid id);
-        void Delete (Guid id);
-        IReadOnlyList<ToDoItem> Find(ToDoUser user, string namePrefix);
+        Task<IReadOnlyList<ToDoItem>> GetAllByUserId(Guid userId);
+        Task<IReadOnlyList<ToDoItem>> GetActiveByUserId(Guid userId);
+        Task<ToDoItem> Add(ToDoUser user, string name);
+        Task MarkCompleted(Guid id);
+        Task Delete (Guid id);
+        Task<IReadOnlyList<ToDoItem>> Find(ToDoUser user, string namePrefix);
+
+        Task<(int maxtasks, int maxline)> LineTasks();
+
+        public int maxtasks { get; set; }
+        public int maxline { get; set; }
     }
 }

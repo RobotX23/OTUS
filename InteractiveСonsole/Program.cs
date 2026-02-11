@@ -5,9 +5,15 @@ using Otus.ToDoList.ConsoleBot;
 
 try
 {
-    var handler = new UpdateHandler();
+    using var ctr = new CancellationTokenSource();
+
+    var userRepository = new InMemoryUserRepository();
+    var toDoRepository = new InMemoryToDoRepository();
+    var toDoService = new ToDoService(toDoRepository, 0, 0);
+    var userService = new UserService(userRepository);
     var botClient = new ConsoleBotClient();
-    botClient.StartReceiving(handler);
+    var handler = new UpdateHandler(toDoService, userService, toDoRepository, botClient);
+    botClient.StartReceiving(handler, ctr.Token);
 
 }
 catch (Exception ex)
