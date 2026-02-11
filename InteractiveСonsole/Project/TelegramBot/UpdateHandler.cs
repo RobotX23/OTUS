@@ -68,7 +68,6 @@ namespace InteractiveСonsole
                             if (flag == false)
                             {
                                 SendMainMenu(_update.Message.Chat.Id, _botClient);
-                                await _botClient.SendMessage(_update.Message.Chat, "Привет!\nВведи следующие команды\n/start, /help, /info, /exit.");
                                 flag = true;
                                 break;
                             }
@@ -76,12 +75,33 @@ namespace InteractiveСonsole
 
                         }
                     }
+
+                    var commands = new[]
+{
+                                    new BotCommand{ Command = "start", Description = "Авторизация"},
+                                    new BotCommand{ Command = "help", Description = "Помощь"},
+                                    new BotCommand{ Command = "info", Description = "Информация о релизе"},
+                                    new BotCommand{ Command = "exit", Description = "Выход из сессии"},
+                                    new BotCommand{ Command = "addtask", Description = "Добавить задачу"},
+                                    new BotCommand{ Command = "showtasks", Description = "Вывести активные задачи"},
+                                    new BotCommand{ Command = "remowetask", Description = "Удалить задачу"},
+                                    new BotCommand{ Command = "completetask", Description = "Закрыть задачу"},
+                                    new BotCommand{ Command = "showalltasks", Description = "Вывести все задачи"},
+                                    new BotCommand{ Command = "find", Description = "Поиск задачи по слову"},
+                                    new BotCommand{ Command = "report", Description = "Отчет статистики"}
+                                };
+                    await _botClient.SetMyCommands(commands);
+
+
+
+
+
                     string? text = _update.Message.Text;
                     if( await Returne(text, ct))
                     {
                         name = null;
                         user2 = null;
-                        await _botClient.SendMessage(_update.Message.Chat, "Вы вышли из сессии. Для продолжения введите /start");
+                        break;
                     }
                     else
                     {
@@ -179,6 +199,7 @@ namespace InteractiveСonsole
                     await NameVerification(Info, name, ct);
                     return false;
                 case "/exit":
+                    SendMainMenuExit(_update.Message.Chat.Id, _botClient);
                     return true; //Обработка команды exid
                 case "/report":
                 case "Отчет":
@@ -402,8 +423,23 @@ namespace InteractiveСonsole
                 ResizeKeyboard = true
             };
 
-            await botClient.SendMessage(chatId, "Главное меню:", replyMarkup: replyKeyboard);
+            await botClient.SendMessage(chatId, "\"Привет!\\nВведи следующие команды\\n/start, /help, /info, /exit.\"", replyMarkup: replyKeyboard);
         }
+
+
+        private static async Task SendMainMenuExit(long chatId, ITelegramBotClient botClient)
+        {
+            var replyKeyboard = new ReplyKeyboardMarkup(new[]
+            {
+            new KeyboardButton("Старт"),
+        })
+            {
+                ResizeKeyboard = true
+            };
+
+            await botClient.SendMessage(chatId, "Вы вышли из сессии!", replyMarkup: replyKeyboard);
+        }
+
 
         private static async Task ChangeKeyboard(long chatId, ITelegramBotClient botClient)
         {
@@ -417,7 +453,7 @@ namespace InteractiveСonsole
                 ResizeKeyboard = true
             };
 
-            await botClient.SendMessage(chatId, "Клавиатура изменена!", replyMarkup: newKeyboard);
+            await botClient.SendMessage(chatId, "Вы авторизованы!", replyMarkup: newKeyboard);
         }
 
 
