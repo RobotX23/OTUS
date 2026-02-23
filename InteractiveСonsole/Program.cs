@@ -1,4 +1,5 @@
 ﻿using InteractiveСonsole;
+using InteractiveСonsole.Project.Infrastructure.DataAccess;
 using Telegram.Bot;
 using Telegram.Bot.Polling;
 using Telegram.Bot.Types.Enums;
@@ -17,7 +18,7 @@ try
     }
 
     var userRepository = new InMemoryUserRepository();
-    var toDoRepository = new InMemoryToDoRepository();
+    var toDoRepository = new FileToDORepository();
     var toDoService = new ToDoService(toDoRepository, 0, 0);
     var userService = new UserService(userRepository);
     var botClient = new TelegramBotClient(token);

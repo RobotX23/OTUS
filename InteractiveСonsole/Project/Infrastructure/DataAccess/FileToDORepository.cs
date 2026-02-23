@@ -3,33 +3,54 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Text.Json;
+using System.IO;
 
-namespace InteractiveСonsole
+namespace InteractiveСonsole.Project.Infrastructure.DataAccess
 {
-    internal class InMemoryToDoRepository : IToDoRepository
+    internal class FileToDORepository : IToDoRepository
     {
-        private readonly  List<ToDoItem> toDoItems = new List<ToDoItem>();
+
+        private readonly string _baseFolder;
+
+        public FileToDORepository (string baseFolder = "ToDOItem")
+        {
+            _baseFolder = baseFolder;
+            Directory.CreateDirectory(_baseFolder);
+        }
+
         /// <summary>
-        /// Удаление задачи
+        /// Добавление задачи
         /// </summary>
         public async Task Add(ToDoItem item)
         {
-            await Task.Run(() => toDoItems.Add(item));
+            var filePath = GetFilePath(item.Id);
+            using (var stream = new FileStream(filePath, FileMode.Create))
+            {
+                await JsonSerializer.SerializeAsync(stream, item);
+            }
         }
+
+        private string GetFilePath(Guid id)
+        {
+            return Path.Combine(_baseFolder, $"{id}.json");
+        }
+
         /// <summary>
         /// Количество активных задач пользователя
         /// </summary>
         public async Task<int> CountActive(Guid userId)
         {
-            return await Task.FromResult(toDoItems.Where(x=> x.User.UserId == userId).Count());
+            var actevitem = await GetActiveByUserId(userId);
+            return actevitem.Count;
         }
 
         public async Task Delete(Guid id)
         {
-            var zadacha = await Get(id);
-            if (zadacha != null)
+            var filePath = GetFilePath(id);
+            if (filePath != null)
             {
-                toDoItems.Remove(zadacha);
+                File.Delete(filePath);
             }
         }
         /// <summary>
@@ -37,7 +58,8 @@ namespace InteractiveСonsole
         /// </summary>
         public async Task<bool> ExistsByName(Guid userId, string name)
         {
-            if (toDoItems.FirstOrDefault(x => x.Name == name && x.User.UserId == userId) != null)
+            var item = await GetAllByUserId(userId);
+            if (item.FirstOrDefault(x => x.Name == name && x.User.UserId == userId) != null)
             {
                 return await Task.FromResult(true);
             }
@@ -51,7 +73,8 @@ namespace InteractiveСonsole
         /// </summary>
         public async Task<IReadOnlyList<ToDoItem>> Find(Guid userId, Func<ToDoItem, bool> predicate)
         {
-            return await Task.FromResult(toDoItems.Where(x => x.User.UserId == userId && predicate(x)).ToList());
+            var item = await GetAllByUserId(userId);
+            return item.Where(predicate).ToList().AsReadOnly();
         }
 
 
@@ -60,22 +83,46 @@ namespace InteractiveСonsole
         /// </summary>
         public async Task<ToDoItem?> Get(Guid id)
         {
-            return await Task.FromResult(toDoItems.FirstOrDefault(x => x.Id == id));
+            var filePath = GetFilePath(id);
+            if (!File.Exists(filePath))
+            {
+                return null;
+            }
+
+            using (var stream = new FileStream(filePath, FileMode.Open))
+            { 
+                return await JsonSerializer.DeserializeAsync<ToDoItem?>(stream);
+            }
         }
         /// <summary>
         /// Вывод активных задач пользователя
         /// </summary>
         public async Task<IReadOnlyList<ToDoItem>> GetActiveByUserId(Guid userId)
         {
-            return await Task.FromResult(toDoItems.Where(x => x.User.UserId == userId && x.State == ToDoItemState.Active).ToList());
+            var items = await GetAllByUserId(userId);
+            return items.Where(x => x.State == ToDoItemState.Active).ToList().AsReadOnly();
         }
         /// <summary>
         /// Получить список все задач
         /// </summary>
         public async Task<IReadOnlyList<ToDoItem>> GetAllByUserId(Guid userId)
         {
-            var task = toDoItems.Where(x => x.User.UserId == userId).ToList();
-            return await Task.FromResult(task);
+            var files = Directory.GetFiles(_baseFolder, "*.json");
+            var items = new List<ToDoItem>();
+
+            foreach (var file in files)
+            {
+                var item = await Get(Guid.Parse(Path.GetFileNameWithoutExtension(file)));
+
+                var user1 = item.User.UserId;
+
+                if (item?.User.UserId == userId)
+                {
+                    items.Add(item);
+                }
+            }
+
+            return items.AsReadOnly();
         }
         /// <summary>
         /// Изменение задачи
