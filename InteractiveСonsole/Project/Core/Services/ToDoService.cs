@@ -100,6 +100,7 @@ namespace InteractiveСonsole
             if (zadacha != null)
             {
                 zadacha.ChangeState(ToDoItemState.Completed);
+                _toDoRepository.Update(zadacha);
             }
         }
         /// <summary>

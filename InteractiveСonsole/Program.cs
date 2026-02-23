@@ -18,7 +18,7 @@ try
     }
 
     var userRepository = new FileUserRepository();
-    var toDoRepository = new FileToDORepository();
+    var toDoRepository = new FileToDoRepository();
     var toDoService = new ToDoService(toDoRepository, 0, 0);
     var userService = new UserService(userRepository);
     var botClient = new TelegramBotClient(token);

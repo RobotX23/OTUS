@@ -5,36 +5,43 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Text.Json;
 using System.IO;
+using Telegram.Bot.Types;
 
 namespace InteractiveСonsole.Project.Infrastructure.DataAccess
 {
-    internal class FileToDORepository : IToDoRepository
+    internal class FileToDoRepository : IToDoRepository
     {
 
         private readonly string _baseFolder;
 
-        public FileToDORepository (string baseFolder = "ToDOItem")
+        public FileToDoRepository (string baseFolder = "ToDOItem")
         {
             _baseFolder = baseFolder;
             Directory.CreateDirectory(_baseFolder);
         }
+
 
         /// <summary>
         /// Добавление задачи
         /// </summary>
         public async Task Add(ToDoItem item)
         {
-            var filePath = GetFilePath(item.Id);
-            using (var stream = new FileStream(filePath, FileMode.Create))
+            var filePathUserId = GetFilePathUserId(item.User.UserId ,item.Id);
+            using (var stream = new FileStream(filePathUserId, FileMode.Create))
             {
                 await JsonSerializer.SerializeAsync(stream, item);
             }
         }
 
-        private string GetFilePath(Guid id)
+        /// <summary>
+        /// Создание файла связки UserID Item
+        /// </summary>
+        private string GetFilePathUserId(Guid userId, Guid id)
         {
-            return Path.Combine(_baseFolder, $"{id}.json");
+            string filepath = $"{_baseFolder}\\{userId}";
+            return Path.Combine(filepath, $"{id}.json");
         }
+
 
         /// <summary>
         /// Количество активных задач пользователя
@@ -45,13 +52,25 @@ namespace InteractiveСonsole.Project.Infrastructure.DataAccess
             return actevitem.Count;
         }
 
+
+        /// <summary>
+        /// Удаление задачи
+        /// </summary>
         public async Task Delete(Guid id)
         {
-            var filePath = GetFilePath(id);
-            if (filePath != null)
+            string filePath = _baseFolder;
+            string namefile = $"{id}.json";
+
+            var file = Directory.GetFiles(filePath, namefile, SearchOption.AllDirectories);
+
+            if ( file.Length > 0)
             {
-                File.Delete(filePath);
+                foreach(var fail in file)
+                {
+                    File.Delete(fail);
+                }
             }
+
         }
         /// <summary>
         /// Проверка на дубликат
@@ -83,13 +102,16 @@ namespace InteractiveСonsole.Project.Infrastructure.DataAccess
         /// </summary>
         public async Task<ToDoItem?> Get(Guid id)
         {
-            var filePath = GetFilePath(id);
-            if (!File.Exists(filePath))
+            string filePath = _baseFolder;
+            string namefile = $"{id}.json";
+
+            var file = Directory.GetFiles(filePath, namefile, SearchOption.AllDirectories).FirstOrDefault();
+            if (!File.Exists(file))
             {
                 return null;
             }
 
-            using (var stream = new FileStream(filePath, FileMode.Open))
+            using (var stream = new FileStream(file, FileMode.Open))
             {
                 return await JsonSerializer.DeserializeAsync<ToDoItem>(stream); ;
             }
@@ -107,7 +129,9 @@ namespace InteractiveСonsole.Project.Infrastructure.DataAccess
         /// </summary>
         public async Task<IReadOnlyList<ToDoItem>> GetAllByUserId(Guid userId)
         {
-            var files = Directory.GetFiles(_baseFolder, "*.json");
+            string pathFile = $"{_baseFolder}\\{userId}";
+            DirectoryInfo di = Directory.CreateDirectory(pathFile);
+            var files = Directory.GetFiles(pathFile, "*.json");
             var items = new List<ToDoItem>();
 
             foreach (var file in files)
@@ -127,14 +151,10 @@ namespace InteractiveСonsole.Project.Infrastructure.DataAccess
         /// </summary>
         public async Task Update(ToDoItem item)
         {
-            var updateItem = await Get(item.Id);
-            if (updateItem != null)
+            var filePathUserId = GetFilePathUserId(item.User.UserId, item.Id);
+            using (var stream = new FileStream(filePathUserId, FileMode.Create))
             {
-                updateItem.State = item.State;
-                updateItem.Name = item.Name;
-                updateItem.StateChangeAt = item.StateChangeAt;
-                updateItem.User = item.User;
-
+                await JsonSerializer.SerializeAsync(stream, item);
             }
         }
     }
