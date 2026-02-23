@@ -1,8 +1,8 @@
 ﻿using InteractiveСonsole.Project.Core.Exceptions;
-using Otus.ToDoList.ConsoleBot;
-using Otus.ToDoList.ConsoleBot.Types;
-using System.Reflection.Metadata.Ecma335;
-using System.Reflection.PortableExecutable;
+using Telegram.Bot;
+using Telegram.Bot.Polling;
+using Telegram.Bot.Types;
+using Telegram.Bot.Types.ReplyMarkups;
 
 
 namespace InteractiveСonsole
@@ -41,13 +41,13 @@ namespace InteractiveСonsole
                     {
                         if (flag == false)
                         {
-                            await _botClient.SendMessage(_update.Message.Chat, "Введите максимальное допустимое количество задач: ", ct);
+                            await _botClient.SendMessage(_update.Message.Chat, "Введите максимальное допустимое количество задач: ");
                             flag = true;
                             break;
                         }
                         flag = false;
                         maxtasks = ParseAndValidatelnt(_update.Message.Text, 1, 100);
-                        await _botClient.SendMessage(_update.Message.Chat, $"Вы ввели: {maxtasks} количество задач.", ct);
+                        await _botClient.SendMessage(_update.Message.Chat, $"Вы ввели: {maxtasks} количество задач.");
                         _toDoService.maxtasks = maxtasks;
                     }
 
@@ -55,19 +55,19 @@ namespace InteractiveСonsole
                     {
                         if (flag == false)
                         {
-                            await _botClient.SendMessage(_update.Message.Chat, "Введите максимальную длинну задач: ", ct);
+                            await _botClient.SendMessage(_update.Message.Chat, "Введите максимальную длинну задач: ");
                             flag = true;
                             break;
                         }
                         flag = false;
                         maxline = ParseAndValidatelnt(_update.Message.Text, 1, 100);
-                        await _botClient.SendMessage(_update.Message.Chat, $"Вы введи: {maxline} длинну задачи.", ct);
+                        await _botClient.SendMessage(_update.Message.Chat, $"Вы введи: {maxline} длинну задачи.");
                         _toDoService.maxline = maxline;
                         if (name == null)
                         {
                             if (flag == false)
                             {
-                                await _botClient.SendMessage(_update.Message.Chat, "Привет!\nВведи следующие команды\n/start, /help, /info, /exit.", ct);
+                                SendMainMenu(_update.Message.Chat.Id, _botClient);
                                 flag = true;
                                 break;
                             }
@@ -75,12 +75,33 @@ namespace InteractiveСonsole
 
                         }
                     }
+
+                    var commands = new[]
+{
+                                    new BotCommand{ Command = "start", Description = "Авторизация"},
+                                    new BotCommand{ Command = "help", Description = "Помощь"},
+                                    new BotCommand{ Command = "info", Description = "Информация о релизе"},
+                                    new BotCommand{ Command = "exit", Description = "Выход из сессии"},
+                                    new BotCommand{ Command = "addtask", Description = "Добавить задачу"},
+                                    new BotCommand{ Command = "showtasks", Description = "Вывести активные задачи"},
+                                    new BotCommand{ Command = "remowetask", Description = "Удалить задачу"},
+                                    new BotCommand{ Command = "completetask", Description = "Закрыть задачу"},
+                                    new BotCommand{ Command = "showalltasks", Description = "Вывести все задачи"},
+                                    new BotCommand{ Command = "find", Description = "Поиск задачи по слову"},
+                                    new BotCommand{ Command = "report", Description = "Отчет статистики"}
+                                };
+                    await _botClient.SetMyCommands(commands);
+
+
+
+
+
                     string? text = _update.Message.Text;
                     if( await Returne(text, ct))
                     {
                         name = null;
                         user2 = null;
-                        await _botClient.SendMessage(_update.Message.Chat, "Вы вышли из сессии. Для продолжения введите /start", ct);
+                        break;
                     }
                     else
                     {
@@ -93,35 +114,35 @@ namespace InteractiveСonsole
                 }
                 catch (TaskCountLimitException ex)
                 {
-                    await Task.FromResult(HandleErrorAsync(_botClient, ex, ct));
-                    await _botClient.SendMessage(_update.Message.Chat, ex.Message, ct);
+                    await HandleErrorAsync(_botClient, ex, HandleErrorSource.HandleUpdateError, ct);
+                    await _botClient.SendMessage(_update.Message.Chat, ex.Message);
                     break;
 
                 }
                 catch (TaskLengthLimitException ex)
                 {
-                    await HandleErrorAsync(_botClient, ex, ct);
-                    await _botClient.SendMessage(_update.Message.Chat, ex.Message, ct);
+                    await HandleErrorAsync(_botClient, ex, HandleErrorSource.HandleUpdateError, ct);
+                    await _botClient.SendMessage(_update.Message.Chat, ex.Message);
                     break;
                 }
                 catch (DublicateTaskException ex)
                 {
-                    await HandleErrorAsync(_botClient, ex, ct);
-                    await _botClient.SendMessage(_update.Message.Chat, ex.Message, ct);
+                    await HandleErrorAsync(_botClient, ex, HandleErrorSource.HandleUpdateError, ct);
+                    await _botClient.SendMessage(_update.Message.Chat, ex.Message);
                     break;
                 }
                 catch (FormatException)
                 {
                     Exception myEx = new Exception("Ошибка: вы ввели не корректное число.");
-                    await HandleErrorAsync(_botClient, myEx, ct);
-                    await _botClient.SendMessage(_update.Message.Chat, "Ошибка: вы ввели не корректное число.", ct);
+                    await HandleErrorAsync(_botClient, myEx, HandleErrorSource.HandleUpdateError, ct);
+                    await _botClient.SendMessage(_update.Message.Chat, "Ошибка: вы ввели не корректное число.");
                     flag = true;
                     break;
                 }
                 catch (ArgumentException ex)
                 {
-                    await HandleErrorAsync(_botClient, ex, ct);
-                    await _botClient.SendMessage(_update.Message.Chat, ex.Message, ct);
+                    await HandleErrorAsync(_botClient, ex, HandleErrorSource.HandleUpdateError, ct);
+                    await _botClient.SendMessage(_update.Message.Chat, ex.Message);
                     break;
                 }
             }
@@ -152,7 +173,7 @@ namespace InteractiveСonsole
             switch (text)
             {
                 case "/start"://Обработка команды start
-
+                case "Старт":
                     var user = _update.Message.From;
                     long userId = user.Id;
                     string? userName = user.Username;
@@ -168,8 +189,9 @@ namespace InteractiveСonsole
                         name = user2?.TelegramUserName;
                     }
                     await NameVerification("Не получилось определить имя чата", name, ct);
+                    ChangeKeyboard(_update.Message.Chat.Id, _botClient);
 
-                        return false;
+                    return false;
                 case "/help": //Обработка команды help
                     await NameVerification(Help, name, ct);
                     return false;
@@ -177,11 +199,13 @@ namespace InteractiveСonsole
                     await NameVerification(Info, name, ct);
                     return false;
                 case "/exit":
+                    SendMainMenuExit(_update.Message.Chat.Id, _botClient);
                     return true; //Обработка команды exid
                 case "/report":
+                case "Отчет":
                     if (string.IsNullOrWhiteSpace(name))
                     {
-                        await _botClient.SendMessage(_update.Message.Chat, "Команда не распознана", ct);
+                        await _botClient.SendMessage(_update.Message.Chat, "Команда не распознана");
                         return false;
                     }
                     else 
@@ -189,13 +213,13 @@ namespace InteractiveСonsole
 
                         var toDoReportService = new ToDoReportService(_toDoRepository);
                         var report = await toDoReportService.GetUserStats(user2.UserId);
-                        await _botClient.SendMessage(_update.Message.Chat, $"Статистика по задачам на {report.generatedAt}. Всего: {report.total}; Завершено {report.completed}; Активных: {report.active};", ct);
+                        await _botClient.SendMessage(_update.Message.Chat, $"Статистика по задачам на {report.generatedAt}. Всего: {report.total}; Завершено {report.completed}; Активных: {report.active};");
                         return false;
                     }
                 case string command when command.StartsWith("/find"):
                     if (string.IsNullOrWhiteSpace(name))
                     {
-                        await _botClient.SendMessage(_update.Message.Chat, "Команда не распознана", ct);
+                        await _botClient.SendMessage(_update.Message.Chat, "Команда не распознана");
                         return false;
                     }
                     else
@@ -210,15 +234,15 @@ namespace InteractiveСonsole
                         int i = 1;
                         if (taski != null)
                         {
-                            await _botClient.SendMessage(_update.Message.Chat, "Ваш список задач:", ct);
+                            await _botClient.SendMessage(_update.Message.Chat, "Ваш список задач:");
                             foreach (var tasks in taski)
                             {
-                                await _botClient.SendMessage(_update.Message.Chat, $"Задача {i++}:{tasks.Name} - {tasks.CreateAt} - {tasks.Id}", ct);
+                                await _botClient.SendMessage(_update.Message.Chat, $"Задача {i++}:{tasks.Name} - {tasks.CreateAt} - '{tasks.Id}'");
                             }
                         }
                         else
                         {
-                            await _botClient.SendMessage(_update.Message.Chat, $"Список задач пуст!", ct);
+                            await _botClient.SendMessage(_update.Message.Chat, $"Список задач пуст!");
                         }
 
                         return false;
@@ -226,7 +250,7 @@ namespace InteractiveСonsole
                 case string command when command.StartsWith("/addtask"):
                     if (string.IsNullOrWhiteSpace(name))
                     {
-                        await _botClient.SendMessage(_update.Message.Chat, "Команда не распознана", ct);
+                        await _botClient.SendMessage(_update.Message.Chat, "Команда не распознана");
                         return false;
                     }
                     else
@@ -237,13 +261,14 @@ namespace InteractiveСonsole
                         ValidateString(partOne[1]);
                         string task_2 = partOne[1].Trim(); //Используем только вторую часть команды
                         var task_1 =await _toDoService.Add(user2, task_2); // Вызов переданного метода
-                        await _botClient.SendMessage(_update.Message.Chat, $"Задача \"{task_1.Name}\" успешно добавлена", ct);
+                        await _botClient.SendMessage(_update.Message.Chat, $"Задача \"{task_1.Name}\" успешно добавлена");
                         return false;
                     }
                 case "/showtasks":
+                case "Активные задачи":
                     if (string.IsNullOrWhiteSpace(name))
                     {
-                        await _botClient.SendMessage(_update.Message.Chat, "Команда не распознана", ct);
+                        await _botClient.SendMessage(_update.Message.Chat, "Команда не распознана");
                         return false;
                     }
                     else
@@ -253,15 +278,15 @@ namespace InteractiveСonsole
                         int i = 1;
                         if (taski != null)
                         {
-                            await _botClient.SendMessage(_update.Message.Chat, "Ваш список задач:", ct);
+                            await _botClient.SendMessage(_update.Message.Chat, "Ваш список задач:");
                             foreach (var tasks in taski)
                             {
-                                await _botClient.SendMessage(_update.Message.Chat, $"Задача {i++}:{tasks.Name} - {tasks.CreateAt} - {tasks.Id}", ct);
+                                await _botClient.SendMessage(_update.Message.Chat, $"Задача {i++}:{tasks.Name} - {tasks.CreateAt} - '{tasks.Id}'");
                             }
                         }
                         else
                         {
-                            await _botClient.SendMessage(_update.Message.Chat, $"Список задач пуст!", ct);
+                            await _botClient.SendMessage(_update.Message.Chat, $"Список задач пуст!");
                         }
 
                         return false;
@@ -269,7 +294,7 @@ namespace InteractiveСonsole
                 case string command when command.StartsWith("/remowetask"):
                     if (string.IsNullOrWhiteSpace(name))
                     {
-                        await _botClient.SendMessage(_update.Message.Chat, "Команда не распознана", ct);
+                        await _botClient.SendMessage(_update.Message.Chat, "Команда не распознана");
                         return false;
                     }
                     else
@@ -290,16 +315,16 @@ namespace InteractiveСonsole
                             {
                                 var scan_task = taskess[Convert.ToInt32(number) - 1];
                                 await _toDoService.Delete(scan_task.Id); // Вызов переданного метода
-                                await _botClient.SendMessage(_update.Message.Chat, $"Задача - {scan_task.Name} удалена!", ct);
+                                await _botClient.SendMessage(_update.Message.Chat, $"Задача - {scan_task.Name} удалена!");
                             }
                             else
                             {
-                                await _botClient.SendMessage(_update.Message.Chat, "Ошибка: введено не корректнок число.", ct);
+                                await _botClient.SendMessage(_update.Message.Chat, "Ошибка: введено не корректнок число.");
                             }
                         }
                         else
                         {
-                            await _botClient.SendMessage(_update.Message.Chat, "Ошибка: введено не число.", ct);
+                            await _botClient.SendMessage(_update.Message.Chat, "Ошибка: введено не число.");
                         }
 
                         return false;
@@ -308,7 +333,7 @@ namespace InteractiveСonsole
                 case string command when command.StartsWith("/completetask"):
                     if (string.IsNullOrWhiteSpace(name))
                     {
-                        await _botClient.SendMessage(_update.Message.Chat, "Команда не распознана", ct);
+                        await _botClient.SendMessage(_update.Message.Chat, "Команда не распознана");
                         return false;
                     }
                     else
@@ -319,13 +344,14 @@ namespace InteractiveСonsole
                         ValidateString(parts[1]);
                         Guid id = Guid.Parse(parts[1].Trim()); //Используем только вторую часть команды
                         await _toDoService.MarkCompleted(id); // Вызов переданного метода
-                        await _botClient.SendMessage(_update.Message.Chat, $"Задача - {parts[1].Trim()} завершена!", ct);
+                        await _botClient.SendMessage(_update.Message.Chat, $"Задача - {parts[1].Trim()} завершена!");
                         return false;
                     }
                 case "/showalltasks":
+                case "Все задачи":
                     if (string.IsNullOrWhiteSpace(name))
                     {
-                        await _botClient.SendMessage(_update.Message.Chat, "Команда не распознана", ct);
+                        await _botClient.SendMessage(_update.Message.Chat, "Команда не распознана");
                         return false;
                     }
                     else
@@ -335,21 +361,21 @@ namespace InteractiveСonsole
                         int i = 1;
                         if (taski != null)
                         {
-                            await _botClient.SendMessage(_update.Message.Chat, "Ваш список задач:", ct);
+                            await _botClient.SendMessage(_update.Message.Chat, "Ваш список задач:");
                             foreach (var tasks in taski)
                             {
-                                await _botClient.SendMessage(_update.Message.Chat, $"Задача {i++}:({tasks.State}) {tasks.Name} - {tasks.CreateAt} - {tasks.Id}", ct);
+                                await _botClient.SendMessage(_update.Message.Chat, $"Задача {i++}:({tasks.State}) {tasks.Name} - {tasks.CreateAt} - '{tasks.Id}'");
                             }
                         }
                         else
                         {
-                            await _botClient.SendMessage(_update.Message.Chat, $"Список задач пуст!", ct);
+                            await _botClient.SendMessage(_update.Message.Chat, $"Список задач пуст!");
                         }
 
                         return false;
                     }
                 default: //если команды не распозднаны то выводим сообщение
-                    await _botClient.SendMessage(_update.Message.Chat, "Команда не распознана", ct);
+                    await _botClient.SendMessage(_update.Message.Chat, "Команда не распознана");
                     return false;
             }
         }
@@ -361,12 +387,12 @@ namespace InteractiveСonsole
         {
             if (!string.IsNullOrWhiteSpace(name))
             {
-                await _botClient.SendMessage(_update.Message.Chat, $"Приветствую: {name}", ct);
-                await _botClient.SendMessage(_update.Message.Chat, massege, ct);
+                await _botClient.SendMessage(_update.Message.Chat, $"Приветствую: {name}");
+                await _botClient.SendMessage(_update.Message.Chat, massege);
             }
             else
             {
-                await _botClient.SendMessage(_update.Message.Chat, massege, ct);
+                await _botClient.SendMessage(_update.Message.Chat, massege);
             }
         }
 
@@ -378,11 +404,58 @@ namespace InteractiveСonsole
             }
         }
 
-        public Task HandleErrorAsync(ITelegramBotClient botClient, Exception exception, CancellationToken ct)
+
+        public Task HandleErrorAsync(ITelegramBotClient botClient, Exception exception, HandleErrorSource source, CancellationToken cancellationToken)
         {
             Console.WriteLine($"HandleError: {exception})");
             return Task.CompletedTask;
         }
+
+
+
+        private static async Task SendMainMenu(long chatId, ITelegramBotClient botClient)
+        {
+            var replyKeyboard = new ReplyKeyboardMarkup(new[]
+            {
+            new KeyboardButton("Старт"),
+        })
+            {
+                ResizeKeyboard = true
+            };
+
+            await botClient.SendMessage(chatId, "\"Привет!\\nВведи следующие команды\\n/start, /help, /info, /exit.\"", replyMarkup: replyKeyboard);
+        }
+
+
+        private static async Task SendMainMenuExit(long chatId, ITelegramBotClient botClient)
+        {
+            var replyKeyboard = new ReplyKeyboardMarkup(new[]
+            {
+            new KeyboardButton("Старт"),
+        })
+            {
+                ResizeKeyboard = true
+            };
+
+            await botClient.SendMessage(chatId, "Вы вышли из сессии!", replyMarkup: replyKeyboard);
+        }
+
+
+        private static async Task ChangeKeyboard(long chatId, ITelegramBotClient botClient)
+        {
+            var newKeyboard = new ReplyKeyboardMarkup(new[]
+            {
+            new KeyboardButton("Все задачи"),
+            new KeyboardButton("Активные задачи"),
+            new KeyboardButton("Отчет") // Добавим кнопку для возврата на основное меню
+        })
+            {
+                ResizeKeyboard = true
+            };
+
+            await botClient.SendMessage(chatId, "Вы авторизованы!", replyMarkup: newKeyboard);
+        }
+
 
 
         string Help { get; set; } = "Просто вводи команды\n/start, /help, /info, /exit.\nЕсли авторизовался, то вводи команду /addtask, /showtasks, /remowetask (фрмат ввода '№ задачи'), /completetask (фрмат ввода 'команда id задачи'), /showalltasks, /find (вводи часть задачи и получай список задач начинающийся на данное слово), /report (вывод статистики)\nУдачи!!!!!";

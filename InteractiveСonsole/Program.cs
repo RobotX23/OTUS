@@ -1,19 +1,56 @@
 ﻿using InteractiveСonsole;
-using Otus.ToDoList.ConsoleBot;
+using Telegram.Bot;
+using Telegram.Bot.Polling;
+using Telegram.Bot.Types.Enums;
+
 
 
 
 try
 {
     using var ctr = new CancellationTokenSource();
+    string token = Environment.GetEnvironmentVariable("TELEGRAM_BOT_TOKEN_EX1", EnvironmentVariableTarget.User);
+    if (string.IsNullOrEmpty(token))
+    {
+        Console.WriteLine("Токен бота не найден. Убедитесь, что вы установили переменную окружения.");
+        return;
+    }
 
     var userRepository = new InMemoryUserRepository();
     var toDoRepository = new InMemoryToDoRepository();
     var toDoService = new ToDoService(toDoRepository, 0, 0);
     var userService = new UserService(userRepository);
-    var botClient = new ConsoleBotClient();
+    var botClient = new TelegramBotClient(token);
+
     var handler = new UpdateHandler(toDoService, userService, toDoRepository, botClient);
-    botClient.StartReceiving(handler, ctr.Token);
+    botClient.StartReceiving(handler);
+
+    var me = await botClient.GetMe();
+    Console.WriteLine($"{me.FirstName} запущен!");
+
+    var receiverOptions = new ReceiverOptions
+    {
+        AllowedUpdates = [UpdateType.Message], 
+        DropPendingUpdates = true
+    };
+
+    Console.WriteLine("Нажмите клавишу A для выхода");
+
+    // Ожидание нажатия клавиши
+    while (true)
+    {
+        var key = Console.ReadKey(true).Key; // Считываем нажатую клавишу
+        if (key == ConsoleKey.A)
+        {
+            Console.WriteLine("Выход из программы...");
+            ctr.Cancel(); // Отмена всех асинхронных операций
+            break;
+        }
+        else
+        {
+            Console.WriteLine($"Информация о боте: {me.FirstName} (ID: {me.Id})");
+        }
+    }
 
 }
 catch (Exception ex)
