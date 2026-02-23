@@ -17,7 +17,7 @@ try
         return;
     }
 
-    var userRepository = new InMemoryUserRepository();
+    var userRepository = new FileUserRepository();
     var toDoRepository = new FileToDORepository();
     var toDoService = new ToDoService(toDoRepository, 0, 0);
     var userService = new UserService(userRepository);

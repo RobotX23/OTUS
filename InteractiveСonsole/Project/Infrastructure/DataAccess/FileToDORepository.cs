@@ -90,8 +90,8 @@ namespace InteractiveСonsole.Project.Infrastructure.DataAccess
             }
 
             using (var stream = new FileStream(filePath, FileMode.Open))
-            { 
-                return await JsonSerializer.DeserializeAsync<ToDoItem?>(stream);
+            {
+                return await JsonSerializer.DeserializeAsync<ToDoItem>(stream); ;
             }
         }
         /// <summary>
@@ -113,8 +113,6 @@ namespace InteractiveСonsole.Project.Infrastructure.DataAccess
             foreach (var file in files)
             {
                 var item = await Get(Guid.Parse(Path.GetFileNameWithoutExtension(file)));
-
-                var user1 = item.User.UserId;
 
                 if (item?.User.UserId == userId)
                 {
