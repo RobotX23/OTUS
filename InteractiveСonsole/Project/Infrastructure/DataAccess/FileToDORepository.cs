@@ -1,10 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Text.Json;
 using System.IO;
+using System.Linq;
+using System.Net.Http.Json;
+using System.Reflection;
+using System.Text;
+using System.Text.Json;
+using System.Text.Json.Serialization;
+using System.Threading.Tasks;
 using Telegram.Bot.Types;
 
 namespace InteractiveСonsole.Project.Infrastructure.DataAccess
@@ -13,11 +16,13 @@ namespace InteractiveСonsole.Project.Infrastructure.DataAccess
     {
 
         private readonly string _baseFolder;
+        private Dictionary<Guid, string> _index;
 
         public FileToDoRepository (string baseFolder = "ToDOItem")
         {
             _baseFolder = baseFolder;
             Directory.CreateDirectory(_baseFolder);
+            LoadIndex();
         }
 
 
@@ -31,7 +36,88 @@ namespace InteractiveСonsole.Project.Infrastructure.DataAccess
             {
                 await JsonSerializer.SerializeAsync(stream, item);
             }
+
+            AddIndex(item.Id, item.User.UserId);
         }
+
+
+
+        private async Task LoadIndex()
+        {
+
+            string jsonIndex = Directory.GetFiles(_baseFolder, "index.json", SearchOption.AllDirectories).FirstOrDefault();
+
+            if (jsonIndex ==  null)
+            {
+                await IndexSerch();
+            }
+            else 
+            {
+                File.Delete($"{_baseFolder}//index.json");
+                await IndexSerch();
+
+            }
+            
+        }
+
+        private async Task IndexSerch()
+        {
+            string[] jsonFile = Directory.GetFiles(_baseFolder, "*.json", SearchOption.AllDirectories);
+
+            if (jsonFile.Length > 0)
+            {
+                foreach (var file1 in jsonFile)
+                {
+
+                    using (var stream = new FileStream(file1, FileMode.Open))
+                    {
+                        var index1 = await JsonSerializer.DeserializeAsync<ToDoItem>(stream);
+
+                        AddIndex(index1.Id, index1.User.UserId);
+                    }
+
+
+                }
+            }
+        }
+
+        /// <summary>
+        /// Добавление связки ключ-значени ToDoItem = UserId
+        /// </summary>
+        public async Task AddIndex(Guid key, Guid value)
+        {
+
+            var inddex = new Dictionary<Guid, Guid>();
+
+
+            var filePathUserId = Index();
+
+            if (File.Exists(filePathUserId))
+            {
+                // Чтение содержимого файла
+                string jsonString = File.ReadAllText(filePathUserId);
+
+                // Десериализация JSON в Dictionary<Guid, Guid>
+                inddex = JsonSerializer.Deserialize<Dictionary<Guid, Guid>>(jsonString);
+
+            }
+            else
+            {
+                inddex = new Dictionary<Guid, Guid>();
+            }
+
+            inddex[key] = value;
+
+            string jsonString1 = JsonSerializer.Serialize(inddex, new JsonSerializerOptions { WriteIndented = true });
+
+            // Запись JSON в файл
+            File.WriteAllText(filePathUserId, jsonString1);
+
+
+        }
+
+
+
 
         /// <summary>
         /// Создание файла связки UserID Item
@@ -41,6 +127,16 @@ namespace InteractiveСonsole.Project.Infrastructure.DataAccess
             string filepath = $"{_baseFolder}\\{userId}";
             return Path.Combine(filepath, $"{id}.json");
         }
+
+
+        /// <summary>
+        /// Создание файла связки UserID Item
+        /// </summary>
+        private string Index()
+        {
+            return Path.Combine(_baseFolder, "index.json");
+        }
+
 
 
         /// <summary>
@@ -58,18 +154,37 @@ namespace InteractiveСonsole.Project.Infrastructure.DataAccess
         /// </summary>
         public async Task Delete(Guid id)
         {
-            string filePath = _baseFolder;
-            string namefile = $"{id}.json";
+            var inddex = new Dictionary<Guid, Guid>();
 
-            var file = Directory.GetFiles(filePath, namefile, SearchOption.AllDirectories);
+            var filePathUserId = Index();
 
-            if ( file.Length > 0)
+            if (File.Exists(filePathUserId))
             {
-                foreach(var fail in file)
+                // Чтение содержимого файла
+                string jsonString = File.ReadAllText(filePathUserId);
+
+                // Десериализация JSON в Dictionary<Guid, Guid>
+                inddex = JsonSerializer.Deserialize<Dictionary<Guid, Guid>>(jsonString);
+
+                var userId = inddex[id];
+                string filePath = _baseFolder;
+                string namefile = $"{id}.json";
+
+                var file = $"{_baseFolder}//{userId}//{namefile}";
+
+                if (file.Length > 0)
                 {
-                    File.Delete(fail);
+                    File.Delete(file);
                 }
+
+                inddex.Remove(id);
+                string jsonString1 = JsonSerializer.Serialize(inddex, new JsonSerializerOptions { WriteIndented = true });
+                // Запись JSON в файл
+                File.WriteAllText(filePathUserId, jsonString1);
+
+
             }
+
 
         }
         /// <summary>
@@ -102,18 +217,33 @@ namespace InteractiveСonsole.Project.Infrastructure.DataAccess
         /// </summary>
         public async Task<ToDoItem?> Get(Guid id)
         {
-            string filePath = _baseFolder;
-            string namefile = $"{id}.json";
+            var inddex = new Dictionary<Guid, Guid>();
 
-            var file = Directory.GetFiles(filePath, namefile, SearchOption.AllDirectories).FirstOrDefault();
-            if (!File.Exists(file))
+            var filePathUserId = Index();
+
+            if (File.Exists(filePathUserId))
+            {
+                // Чтение содержимого файла
+                string jsonString = File.ReadAllText(filePathUserId);
+
+                // Десериализация JSON в Dictionary<Guid, Guid>
+                inddex = JsonSerializer.Deserialize<Dictionary<Guid, Guid>>(jsonString);
+
+                var userId = inddex[id];
+                string filePath = _baseFolder;
+                string namefile = $"{id}.json";
+
+                var file = $"{_baseFolder}//{userId}//{namefile}";
+
+
+                using (var stream = new FileStream(file, FileMode.Open))
+                {
+                    return await JsonSerializer.DeserializeAsync<ToDoItem>(stream); ;
+                }
+            }
+            else
             {
                 return null;
-            }
-
-            using (var stream = new FileStream(file, FileMode.Open))
-            {
-                return await JsonSerializer.DeserializeAsync<ToDoItem>(stream); ;
             }
         }
         /// <summary>
