@@ -54,6 +54,7 @@ namespace InteractiveСonsole
             if (result == ScenarioResult.Completed)
             {
                 await _scenarioContextRepository.ResetContext(message.From!.Id, ct);
+                ChangeKeyboard(_update.Message.Chat.Id, _botClient);
             }
             else
             {
@@ -68,17 +69,28 @@ namespace InteractiveСonsole
             _update = update;
 
 
+            string? textEdit = _update.Message.Text;
+
+            if (textEdit == "/cancel" || textEdit == "Назад")
+            {
+                await _scenarioContextRepository.ResetContext(_update.Message.From!.Id, ct);
+                ChangeKeyboard(_update.Message.Chat.Id, _botClient);
+                return;
+            }
+
 
             if (update.Message == null)
                 return;
 
-            var userId = update.Message.From!.Id;
+            var userId = _update.Message.From!.Id;
 
             var context = await _scenarioContextRepository.GetContext(userId, ct);
 
+  
+
             if (context != null)
             {
-                await ProcessScenario(context, update.Message, ct);
+                await ProcessScenario(context, _update.Message, ct);
                 return;
             }
 
@@ -141,7 +153,9 @@ namespace InteractiveСonsole
                                 new BotCommand{ Command = "completetask", Description = "Закрыть задачу"},
                                 new BotCommand{ Command = "showalltasks", Description = "Вывести все задачи"},
                                 new BotCommand{ Command = "find", Description = "Поиск задачи по слову"},
-                                new BotCommand{ Command = "report", Description = "Отчет статистики"}
+                                new BotCommand{ Command = "report", Description = "Отчет статистики"},
+                                new BotCommand{ Command = "cansel", Description = "выход из цикла добавления задачи"}
+
                             };
                     await _botClient.SetMyCommands(commands);
 
@@ -301,6 +315,7 @@ namespace InteractiveСonsole
 
                         return false;
                     }
+               
                 case "/addtask":
                 case "Добавить задачу":
 
@@ -309,7 +324,7 @@ namespace InteractiveСonsole
                     await _scenarioContextRepository.SetContext(_update.Message.From!.Id, newContext, ct);
 
                     await ProcessScenario(newContext, _update.Message, ct);
-
+                    ChangeKeyboardExid(_update.Message.Chat.Id, _botClient);
                     return false;
                 case "/showtasks":
                 case "Активные задачи":
@@ -502,13 +517,26 @@ namespace InteractiveСonsole
                 ResizeKeyboard = true
             };
 
-            await botClient.SendMessage(chatId, "Вы авторизованы!", replyMarkup: newKeyboard);
+            await botClient.SendMessage(chatId, "Введите команды", replyMarkup: newKeyboard);
         }
 
 
+        private static async Task ChangeKeyboardExid(long chatId, ITelegramBotClient botClient)
+        {
+            var newKeyboard = new ReplyKeyboardMarkup(new[]
+            {
+                new KeyboardButton("Назад") // Добавим кнопку для возврата на основное меню
+            })
+            {
+                ResizeKeyboard = true
+            };
 
-        string Help { get; set; } = "Просто вводи команды\n/start, /help, /info, /exit.\nЕсли авторизовался, то вводи команду /addtask, /showtasks, /remowetask (фрмат ввода '№ задачи'), /completetask (фрмат ввода 'команда id задачи'), /showalltasks, /find (вводи часть задачи и получай список задач начинающийся на данное слово), /report (вывод статистики)\nУдачи!!!!!";
-        string Info { get; set; } = "Версия: 2\nДата создания: 14.11.2025\nДата обновления: 29.01.2026";
+            await botClient.SendMessage(chatId, "Введите название задачи", replyMarkup: newKeyboard);
+        }
+
+
+        string Help { get; set; } = "Просто вводи команды\n/start, /help, /info, /exit.\nЕсли авторизовался, то вводи команду /addtask, /showtasks, /remowetask (фрмат ввода '№ задачи'), /completetask (фрмат ввода 'команда id задачи'), /showalltasks, /find (вводи часть задачи и получай список задач начинающийся на данное слово), /report (вывод статистики), /cansel (выход из цикла добавления задачи)\nУдачи!!!!!";
+        string Info { get; set; } = "Версия: 2\nДата создания: 14.11.2025\nДата обновления: 08.03.2026";
 
     }
 }

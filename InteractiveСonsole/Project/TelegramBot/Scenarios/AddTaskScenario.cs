@@ -34,7 +34,6 @@ namespace InteractiveСonsole.Project.TelegramBot.Scenarios
                     }
 
                     context.Data["user"] = user;
-                    await bot.SendMessage(message.Chat.Id, "Введите название задачи", cancellationToken: ct);
                     context.CurretStep = "Name";
 
                     return ScenarioResult.Transition;
