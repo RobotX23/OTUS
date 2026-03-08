@@ -1,14 +1,13 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace InteractiveСonsole.Project.TelegramBot.Scenarios
+﻿namespace InteractiveСonsole.Project.TelegramBot.Scenarios
 {
-    public enum ScenarioContext
+    internal class ScenarioContext
     {
-        None,
-        AddTask
+        public ScenarioType CurrentScenario {  get; set; }
+        public string? CurretStep { get; set; }
+        public Dictionary<string, object> Data { get; set; } = new();
+        public ScenarioContext(ScenarioType scenario) 
+        {
+            CurrentScenario = scenario;
+        }
     }
 }
