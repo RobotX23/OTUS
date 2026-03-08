@@ -57,20 +57,17 @@ namespace InteractiveСonsole
             }
             else
             {
-                await _scenarioContextRepository.SetContext(message.From!.Id, context, ct);
+                await _scenarioContextRepository.SetContext(message.From!.Id,context, ct);
             }
 
         }
-
-
-
-
-
 
         bool flag = false;
         public async Task HandleUpdateAsync(ITelegramBotClient botClient, Update update, CancellationToken ct)
         {
             _update = update;
+
+
 
             if (update.Message == null)
                 return;
@@ -85,9 +82,9 @@ namespace InteractiveСonsole
                 return;
             }
 
-
             while (true)
             {
+
                 try
                 {
                     var taskline = await _toDoService.LineTasks();
@@ -134,18 +131,18 @@ namespace InteractiveСonsole
 
                     var commands = new[]
 {
-                                    new BotCommand{ Command = "start", Description = "Авторизация"},
-                                    new BotCommand{ Command = "help", Description = "Помощь"},
-                                    new BotCommand{ Command = "info", Description = "Информация о релизе"},
-                                    new BotCommand{ Command = "exit", Description = "Выход из сессии"},
-                                    new BotCommand{ Command = "addtask", Description = "Добавить задачу"},
-                                    new BotCommand{ Command = "showtasks", Description = "Вывести активные задачи"},
-                                    new BotCommand{ Command = "remowetask", Description = "Удалить задачу"},
-                                    new BotCommand{ Command = "completetask", Description = "Закрыть задачу"},
-                                    new BotCommand{ Command = "showalltasks", Description = "Вывести все задачи"},
-                                    new BotCommand{ Command = "find", Description = "Поиск задачи по слову"},
-                                    new BotCommand{ Command = "report", Description = "Отчет статистики"}
-                                };
+                                new BotCommand{ Command = "start", Description = "Авторизация"},
+                                new BotCommand{ Command = "help", Description = "Помощь"},
+                                new BotCommand{ Command = "info", Description = "Информация о релизе"},
+                                new BotCommand{ Command = "exit", Description = "Выход из сессии"},
+                                new BotCommand{ Command = "addtask", Description = "Добавить задачу"},
+                                new BotCommand{ Command = "showtasks", Description = "Вывести активные задачи"},
+                                new BotCommand{ Command = "remowetask", Description = "Удалить задачу"},
+                                new BotCommand{ Command = "completetask", Description = "Закрыть задачу"},
+                                new BotCommand{ Command = "showalltasks", Description = "Вывести все задачи"},
+                                new BotCommand{ Command = "find", Description = "Поиск задачи по слову"},
+                                new BotCommand{ Command = "report", Description = "Отчет статистики"}
+                            };
                     await _botClient.SetMyCommands(commands);
 
 
@@ -153,7 +150,7 @@ namespace InteractiveСonsole
 
 
                     string? text = _update.Message.Text;
-                    if( await Returne(text, ct))
+                    if (await Returne(text, ct))
                     {
                         name = null;
                         user2 = null;
@@ -163,8 +160,8 @@ namespace InteractiveСonsole
                     {
                         break;
                     }
-                    
-                    
+
+
 
 
                 }
@@ -201,6 +198,7 @@ namespace InteractiveСonsole
                     await _botClient.SendMessage(_update.Message.Chat, ex.Message);
                     break;
                 }
+                
             }
         }
             
@@ -303,23 +301,16 @@ namespace InteractiveСonsole
 
                         return false;
                     }
-                case string command when command.StartsWith("/addtask"):
-                    if (string.IsNullOrWhiteSpace(name))
-                    {
-                        await _botClient.SendMessage(_update.Message.Chat, "Команда не распознана");
-                        return false;
-                    }
-                    else
-                    {
-                        List<string> partOne = new List<string>();
-                        partOne.AddRange(command.Split(' ', 2)); //Разделение строки по пробелу после команды
-                        partOne.Add(" ");
-                        ValidateString(partOne[1]);
-                        string task_2 = partOne[1].Trim(); //Используем только вторую часть команды
-                        var task_1 =await _toDoService.Add(user2, task_2); // Вызов переданного метода
-                        await _botClient.SendMessage(_update.Message.Chat, $"Задача \"{task_1.Name}\" успешно добавлена");
-                        return false;
-                    }
+                case "/addtask":
+                case "Добавить задачу":
+
+                    var newContext = new ScenarioContext(ScenarioType.AddTask);
+
+                    await _scenarioContextRepository.SetContext(_update.Message.From!.Id, newContext, ct);
+
+                    await ProcessScenario(newContext, _update.Message, ct);
+
+                    return false;
                 case "/showtasks":
                 case "Активные задачи":
                     if (string.IsNullOrWhiteSpace(name))
@@ -502,10 +493,11 @@ namespace InteractiveСonsole
         {
             var newKeyboard = new ReplyKeyboardMarkup(new[]
             {
-            new KeyboardButton("Все задачи"),
-            new KeyboardButton("Активные задачи"),
-            new KeyboardButton("Отчет") // Добавим кнопку для возврата на основное меню
-        })
+                new KeyboardButton("Добавить задачу"),
+                new KeyboardButton("Все задачи"),
+                new KeyboardButton("Активные задачи"),
+                new KeyboardButton("Отчет") // Добавим кнопку для возврата на основное меню
+            })
             {
                 ResizeKeyboard = true
             };

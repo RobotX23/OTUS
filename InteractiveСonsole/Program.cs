@@ -26,7 +26,7 @@ try
     var scenarioRepository = new InMemoryScenarioContextRepository();
     var scenario = new List<IScenario>
     {
-        new AddTaskScenario(toDoService)
+        new AddTaskScenario(userService, toDoService)
     };
 
 
