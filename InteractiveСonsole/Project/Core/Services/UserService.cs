@@ -33,7 +33,8 @@ namespace InteractiveСonsole
                 return  existingUser;
             }
 
-            var user = new ToDoUser(telegrsmUserName, telegramUserId);
+            var user = new ToDoUser();
+            user.ToDoUserNew(telegrsmUserName, telegramUserId);
             await _userRepository.Add(user);
             return await Task.FromResult(user);
             

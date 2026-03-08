@@ -8,12 +8,12 @@ namespace InteractiveСonsole
 {
     public class ToDoUser
     {
-        public Guid UserId { get; }
-        public string TelegramUserName { get; }
-        public DateTime RegistereAt { get; }
-        public long TelegramUserId { get; }
+        public Guid UserId { get; set; }
+        public string TelegramUserName { get; set; }
+        public DateTime RegistereAt { get; set; }
+        public long TelegramUserId { get; set; }
 
-        public ToDoUser(string telegramUserName, long telegramUserId) 
+        public void ToDoUserNew(string telegramUserName, long telegramUserId) 
         {
             TelegramUserName = telegramUserName;
             UserId = Guid.NewGuid();

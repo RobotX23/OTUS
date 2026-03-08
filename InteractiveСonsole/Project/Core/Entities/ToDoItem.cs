@@ -12,7 +12,7 @@ namespace InteractiveСonsole
     public class ToDoItem
     {
 
-        public Guid Id { get; }
+        public Guid Id { get; set; }
         /// <summary>
         /// Имя пользователя
         /// </summary>
@@ -24,7 +24,7 @@ namespace InteractiveСonsole
         /// <summary>
         /// Время создания
         /// </summary>
-        public DateTime CreateAt { get; }
+        public DateTime CreateAt { get; set; }
         /// <summary>
         /// Статус задачи
         /// </summary>
@@ -34,7 +34,7 @@ namespace InteractiveСonsole
         /// </summary>
         public DateTime? StateChangeAt { get; set; }
 
-        public ToDoItem(ToDoUser user, string name) 
+        public void ToDoItemNew(ToDoUser user, string name) 
         {
             Id = Guid.NewGuid();
             User = user;

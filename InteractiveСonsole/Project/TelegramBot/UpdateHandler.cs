@@ -423,7 +423,8 @@ namespace InteractiveСonsole
                 ResizeKeyboard = true
             };
 
-            await botClient.SendMessage(chatId, "\"Привет!\\nВведи следующие команды\\n/start, /help, /info, /exit.\"", replyMarkup: replyKeyboard);
+            await botClient.SendMessage(chatId, "\"Привет!\"", replyMarkup: replyKeyboard);
+            await botClient.SendMessage(chatId, "Введи следующие команды /start, /help, /info, /exit.", replyMarkup: replyKeyboard);
         }
 
 
