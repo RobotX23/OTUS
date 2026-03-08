@@ -1,4 +1,5 @@
 ﻿using InteractiveСonsole.Project.Core.Exceptions;
+using InteractiveСonsole.Project.TelegramBot.Scenarios;
 using Telegram.Bot;
 using Telegram.Bot.Polling;
 using Telegram.Bot.Types;
@@ -17,19 +18,74 @@ namespace InteractiveСonsole
         private readonly IToDoService _toDoService;
         private readonly IUserService _userService;
         private readonly IToDoRepository _toDoRepository;
+        private readonly IEnumerable<IScenario> _scenarios;
+        private readonly IScenarioContextRepository _scenarioContextRepository;
 
-        public UpdateHandler(IToDoService toDoService, IUserService userService, IToDoRepository toDoRepository, ITelegramBotClient botClient)
+        public UpdateHandler(IToDoService toDoService, IUserService userService, IToDoRepository toDoRepository, ITelegramBotClient botClient, IEnumerable<IScenario> scenarios, IScenarioContextRepository scenarioContextRepository)
         {
             _toDoService = toDoService ?? throw new ArgumentNullException(nameof(toDoService));
             _userService = userService ?? throw new ArgumentNullException(nameof(userService));
             _toDoRepository = toDoRepository ?? throw new ArgumentNullException(nameof(toDoRepository));
             _botClient = botClient;
+
+            _scenarios = scenarios;
+            _scenarioContextRepository = scenarioContextRepository;
         }
+
+
+        private IScenario GetScenario(ScenarioType scenario)
+        {
+            var result = _scenarios.FirstOrDefault(x => x.CanHandle(scenario));
+            if ( result == null)
+            {
+                throw new Exception($"Сценарий {scenario} не найден!");
+            }
+            return result;
+        }
+
+
+
+        private async Task ProcessScenario(ScenarioContext context, Message message, CancellationToken ct)
+        {
+            var scenario = GetScenario(context.CurrentScenario);
+
+            var result = await scenario.HandleMessageAsync(_botClient, context, message, ct);
+
+            if (result == ScenarioResult.Completed)
+            {
+                await _scenarioContextRepository.ResetContext(message.From!.Id, ct);
+            }
+            else
+            {
+                await _scenarioContextRepository.SetContext(message.From!.Id, context, ct);
+            }
+
+        }
+
+
+
+
+
 
         bool flag = false;
         public async Task HandleUpdateAsync(ITelegramBotClient botClient, Update update, CancellationToken ct)
         {
             _update = update;
+
+            if (update.Message == null)
+                return;
+
+            var userId = update.Message.From!.Id;
+
+            var context = await _scenarioContextRepository.GetContext(userId, ct);
+
+            if (context != null)
+            {
+                await ProcessScenario(context, update.Message, ct);
+                return;
+            }
+
+
             while (true)
             {
                 try
