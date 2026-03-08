@@ -38,23 +38,41 @@ namespace InteractiveСonsole.Project.TelegramBot.Scenarios
 
                     return ScenarioResult.Transition;
 
-                case "Name":
-                    var name = message.Text;
-
-                    if (string.IsNullOrEmpty(name))
+                case "Name": // Пользователь ввел название задачи
+                    var taskName = message.Text?.Trim();
+                    if (string.IsNullOrWhiteSpace(taskName))
                     {
-                        await bot.SendMessage(message.Chat.Id, "Название задачи не может быть пустым!", cancellationToken: ct);
+                        await bot.SendMessage(message.Chat.Id, "Название задачи не может быть пустым. Попробуйте еще раз:");
                         return ScenarioResult.Transition;
                     }
 
-                    var todoUser = (ToDoUser)context.Data["user"];
+                    context.Data["TaskName"] = taskName;
+                    await bot.SendMessage(message.Chat.Id, "Введите срок выполнения задачи в формате dd.MM.yyyy:");
+                    context.CurretStep = "Deadline";
+                    return ScenarioResult.Transition;
 
-                    var task = await _todoService.Add(todoUser, name);
+                case "Deadline": // Пользователь ввел дату
+                    if (DateTime.TryParseExact(message.Text, "dd.MM.yyyy", null, System.Globalization.DateTimeStyles.None, out var deadline))
+                    {
+                        if(deadline.Date < DateTime.Now)
+                        {
+                            await bot.SendMessage(message.Chat.Id, "Дедлайн не может быть в прошлом. Пожалуста введите дату в будующем");
+                            return ScenarioResult.Transition;
+                        }
+                        var user2 = (ToDoUser)context.Data["user"];
+                        var name = (string)context.Data["TaskName"];
 
-                    await bot.SendMessage(message.Chat.Id, $"Задача \"{task.Name}\" успешно добавлена!", cancellationToken: ct);
+                        var task = await _todoService.Add(user2, name, deadline);
+                        await bot.SendMessage(message.Chat.Id, $"Задача \"{task.Name}\" успешно добавлена с дедлайном {task.Deadline:dd.MM.yyyy}.");
 
-                    return ScenarioResult.Completed;
-                
+                        return ScenarioResult.Completed;
+                    }
+                    else 
+                    {
+                        await bot.SendMessage(message.Chat.Id, "Неверный формат даты. Пожалуйста, введите дату в формате dd.MM.yyyy:");
+                        return ScenarioResult.Transition;
+                    }
+
             }
             return ScenarioResult.Completed;
         }

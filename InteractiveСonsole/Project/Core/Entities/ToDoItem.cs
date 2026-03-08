@@ -34,7 +34,12 @@ namespace InteractiveСonsole
         /// </summary>
         public DateTime? StateChangeAt { get; set; }
 
-        public void ToDoItemNew(ToDoUser user, string name) 
+        /// <summary>
+        /// Дата завершения
+        /// </summary>
+        public DateTime Deadline { get; set; }
+
+        public void ToDoItemNew(ToDoUser user, string name, DateTime deadline) 
         {
             Id = Guid.NewGuid();
             User = user;
@@ -42,6 +47,7 @@ namespace InteractiveСonsole
             CreateAt = DateTime.UtcNow;
             State = ToDoItemState.Active;
             StateChangeAt = null;
+            Deadline = deadline;
 
 
         }

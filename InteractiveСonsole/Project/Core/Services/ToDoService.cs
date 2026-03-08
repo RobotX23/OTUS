@@ -26,7 +26,7 @@ namespace InteractiveСonsole
         /// <summary>
         /// Метод добавление задачи
         /// </summary>
-        public async Task<ToDoItem> Add(ToDoUser user, string name)
+        public async Task<ToDoItem> Add(ToDoUser user, string name, DateTime deadline)
         {
             var task = await _toDoRepository.GetAllByUserId(user.UserId);
 
@@ -48,7 +48,7 @@ namespace InteractiveСonsole
             else
             {
                 var newTask = new ToDoItem();
-                newTask.ToDoItemNew(user, name);
+                newTask.ToDoItemNew(user, name, deadline);
                 await _toDoRepository.Add(newTask);
                 return newTask;
             }
