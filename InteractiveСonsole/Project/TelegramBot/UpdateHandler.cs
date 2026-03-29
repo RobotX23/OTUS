@@ -1,4 +1,6 @@
 ﻿using InteractiveСonsole.Project.Core.Exceptions;
+using InteractiveСonsole.Project.Core.Services;
+using InteractiveСonsole.Project.TelegramBot.Dto;
 using InteractiveСonsole.Project.TelegramBot.Scenarios;
 using Telegram.Bot;
 using Telegram.Bot.Polling;
@@ -17,17 +19,18 @@ namespace InteractiveСonsole
         private readonly ITelegramBotClient _botClient;
         private readonly IToDoService _toDoService;
         private readonly IUserService _userService;
+        private readonly IToDoListService _toDoListService;
         private readonly IToDoRepository _toDoRepository;
         private readonly IEnumerable<IScenario> _scenarios;
         private readonly IScenarioContextRepository _scenarioContextRepository;
 
-        public UpdateHandler(IToDoService toDoService, IUserService userService, IToDoRepository toDoRepository, ITelegramBotClient botClient, IEnumerable<IScenario> scenarios, IScenarioContextRepository scenarioContextRepository)
+        public UpdateHandler(IToDoService toDoService, IUserService userService, IToDoRepository toDoRepository, ITelegramBotClient botClient, IEnumerable<IScenario> scenarios, IScenarioContextRepository scenarioContextRepository, IToDoListService toDoListService)
         {
             _toDoService = toDoService ?? throw new ArgumentNullException(nameof(toDoService));
             _userService = userService ?? throw new ArgumentNullException(nameof(userService));
             _toDoRepository = toDoRepository ?? throw new ArgumentNullException(nameof(toDoRepository));
             _botClient = botClient;
-
+            _toDoListService = toDoListService ?? throw new ArgumentNullException(nameof(toDoListService));
             _scenarios = scenarios;
             _scenarioContextRepository = scenarioContextRepository;
         }
@@ -68,6 +71,17 @@ namespace InteractiveСonsole
         {
             _update = update;
 
+
+            // Сначала обрабатываем CallbackQuery (если есть)
+            if (update.CallbackQuery != null)
+            {
+                await HandleCallbackAsync(update.CallbackQuery, ct);
+                return;
+            }
+
+            // Дальше обычные сообщения
+            if (update.Message == null)
+                return;
 
             string? textEdit = _update.Message.Text;
 
@@ -148,10 +162,9 @@ namespace InteractiveСonsole
                                 new BotCommand{ Command = "info", Description = "Информация о релизе"},
                                 new BotCommand{ Command = "exit", Description = "Выход из сессии"},
                                 new BotCommand{ Command = "addtask", Description = "Добавить задачу"},
-                                new BotCommand{ Command = "showtasks", Description = "Вывести активные задачи"},
+                                new BotCommand{ Command = "show", Description = "Вывести активные задачи"},
                                 new BotCommand{ Command = "remowetask", Description = "Удалить задачу"},
                                 new BotCommand{ Command = "completetask", Description = "Закрыть задачу"},
-                                new BotCommand{ Command = "showalltasks", Description = "Вывести все задачи"},
                                 new BotCommand{ Command = "find", Description = "Поиск задачи по слову"},
                                 new BotCommand{ Command = "report", Description = "Отчет статистики"},
                                 new BotCommand{ Command = "cansel", Description = "выход из цикла добавления задачи"}
@@ -326,33 +339,9 @@ namespace InteractiveСonsole
                     await ProcessScenario(newContext, _update.Message, ct);
                     ChangeKeyboardExid(_update.Message.Chat.Id, _botClient);
                     return false;
-                case "/showtasks":
+                case "/show":
                 case "Активные задачи":
-                    if (string.IsNullOrWhiteSpace(name))
-                    {
-                        await _botClient.SendMessage(_update.Message.Chat, "Команда не распознана");
-                        return false;
-                    }
-                    else
-                    {
-                        var taski = await _toDoService.GetActiveByUserId(user2.UserId); // Вызов переданного метода
-
-                        int i = 1;
-                        if (taski != null)
-                        {
-                            await _botClient.SendMessage(_update.Message.Chat, "Ваш список задач:");
-                            foreach (var tasks in taski)
-                            {
-                                await _botClient.SendMessage(_update.Message.Chat, $"Задача {i++}:{tasks.Name} - {tasks.CreateAt} - '{tasks.Id}'");
-                            }
-                        }
-                        else
-                        {
-                            await _botClient.SendMessage(_update.Message.Chat, $"Список задач пуст!");
-                        }
-
-                        return false;
-                    }
+                    return await HandleShowCommandAsync(ct);
                 case string command when command.StartsWith("/remowetask"):
                     if (string.IsNullOrWhiteSpace(name))
                     {
@@ -407,33 +396,6 @@ namespace InteractiveСonsole
                         Guid id = Guid.Parse(parts[1].Trim()); //Используем только вторую часть команды
                         await _toDoService.MarkCompleted(id); // Вызов переданного метода
                         await _botClient.SendMessage(_update.Message.Chat, $"Задача - {parts[1].Trim()} завершена!");
-                        return false;
-                    }
-                case "/showalltasks":
-                case "Все задачи":
-                    if (string.IsNullOrWhiteSpace(name))
-                    {
-                        await _botClient.SendMessage(_update.Message.Chat, "Команда не распознана");
-                        return false;
-                    }
-                    else
-                    {
-                        var taski = await _toDoService.GetAllByUserId(user2.UserId); // Вызов переданного метода
-
-                        int i = 1;
-                        if (taski != null)
-                        {
-                            await _botClient.SendMessage(_update.Message.Chat, "Ваш список задач:");
-                            foreach (var tasks in taski)
-                            {
-                                await _botClient.SendMessage(_update.Message.Chat, $"Задача {i++}:({tasks.State}) {tasks.Name} - {tasks.CreateAt} - '{tasks.Id}'");
-                            }
-                        }
-                        else
-                        {
-                            await _botClient.SendMessage(_update.Message.Chat, $"Список задач пуст!");
-                        }
-
                         return false;
                     }
                 default: //если команды не распозднаны то выводим сообщение
@@ -535,7 +497,84 @@ namespace InteractiveСonsole
         }
 
 
-        string Help { get; set; } = "Просто вводи команды\n/start, /help, /info, /exit.\nЕсли авторизовался, то вводи команду /addtask, /showtasks, /remowetask (фрмат ввода '№ задачи'), /completetask (фрмат ввода 'команда id задачи'), /showalltasks, /find (вводи часть задачи и получай список задач начинающийся на данное слово), /report (вывод статистики), /cansel (выход из цикла добавления задачи)\nУдачи!!!!!";
+        // Вызывается при получении команды /show или текста "Активные задачи"
+        private async Task<bool> HandleShowCommandAsync(CancellationToken ct)
+        {
+            // Получаем списки пользователя (IToDoListService должен быть внедрён в UpdateHandler)
+            var lists = await _toDoListService.GetUserLists(user2.UserId, ct) ?? Array.Empty<ToDoList>();
+
+            // Список рядов кнопок для InlineKeyboardMarkup
+            var rows = new List<IEnumerable<InlineKeyboardButton>>();
+
+            // Кнопка "📌Без списка" — Action = "show", ToDoListId = null
+            var noListDto = new ToDoListCallbackDto { Action = "show", ToDoListId = null };
+            rows.Add(new[] { InlineKeyboardButton.WithCallbackData("📌Без списка", noListDto.ToString()) });
+
+            // Кнопки для каждого списка пользователя — Action = "show", ToDoListId = list.Id
+            foreach (var l in lists)
+            {
+                var dto = new ToDoListCallbackDto { Action = "show", ToDoListId = l.Id };
+                var callback = dto.ToString();
+
+                // Если длина callbackData превышает 64 — используем короткий формат Guid без дефисов
+                if (callback.Length > 64)
+                    callback = $"{dto.Action}|{l.Id.ToString("N")}";
+
+                rows.Add(new[] { InlineKeyboardButton.WithCallbackData(l.Name, callback) });
+            }
+
+            // Кнопки действий: добавить список и удалить список
+            rows.Add(new[] { InlineKeyboardButton.WithCallbackData("🆕Добавить", "addlist") });
+            rows.Add(new[] { InlineKeyboardButton.WithCallbackData("❌Удалить", "deletelist") });
+
+            var markup = new InlineKeyboardMarkup(rows);
+
+            // Отправляем сообщение с клавиатурой
+            await _botClient.SendMessage(_update.Message.Chat.Id, "Выберите список", replyMarkup: markup, cancellationToken: ct);
+
+            return false; // не завершает сценарий
+        }
+
+        private async Task HandleCallbackAsync(CallbackQuery callback, CancellationToken ct)
+        {
+            var data = callback.Data ?? string.Empty;
+
+            // Попытка распарсить как ToDoListCallbackDto
+            var dto = ToDoListCallbackDto.FromString(data);
+
+            if (dto.Action == "show")
+            {
+                // Получаем задачи: если ToDoListId == null — без списка, иначе по конкретному списку
+                var items = await _toDoService.GetByUserIdAndList(user2.UserId, dto.ToDoListId, ct) ?? Array.Empty<ToDoItem>();
+
+                // Формируем текст для вывода (пустой список — сообщение)
+                string text;
+                if (items.Count == 0)
+                    text = "Список задач пуст!";
+                else
+                    text = "Ваш список задач:\n" + string.Join("\n", items.Select((t, idx) => $"{idx + 1}. {t.Name} - {t.CreateAt} - '{t.Id}'"));
+
+                // Редактируем исходное сообщение с клавиатурой, чтобы показать задачи
+                await _botClient.EditMessageText(callback.Message.Chat.Id, callback.Message.MessageId, text, cancellationToken: ct);
+            }
+            else if (data == "addlist")
+            {
+                // Переключаем контекст в сценарий создания списка
+                var newContext = new ScenarioContext(ScenarioType.AddList);
+                await _scenarioContextRepository.SetContext(callback.From.Id, newContext, ct);
+                await ProcessScenario(newContext, callback.Message, ct);
+            }
+            else if (data == "deletelist")
+            {
+                // Переключаем контекст в сценарий удаления списка
+                var newContext = new ScenarioContext(ScenarioType.DeleteList);
+                await _scenarioContextRepository.SetContext(callback.From.Id, newContext, ct);
+                await ProcessScenario(newContext, callback.Message, ct);
+            }
+        }
+
+
+        string Help { get; set; } = "Просто вводи команды\n/start, /help, /info, /exit.\nЕсли авторизовался, то вводи команду /addtask, /show, /remowetask (фрмат ввода '№ задачи'), /completetask (фрмат ввода 'команда id задачи'), /find (вводи часть задачи и получай список задач начинающийся на данное слово), /report (вывод статистики), /cansel (выход из цикла добавления задачи)\nУдачи!!!!!";
         string Info { get; set; } = "Версия: 2\nДата создания: 14.11.2025\nДата обновления: 08.03.2026";
 
     }
