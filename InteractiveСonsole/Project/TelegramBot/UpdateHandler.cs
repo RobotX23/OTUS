@@ -39,7 +39,7 @@ namespace InteractiveСonsole
         private IScenario GetScenario(ScenarioType scenario)
         {
             var result = _scenarios.FirstOrDefault(x => x.CanHandle(scenario));
-            if ( result == null)
+            if (result == null)
             {
                 throw new Exception($"Сценарий {scenario} не найден!");
             }
@@ -61,7 +61,7 @@ namespace InteractiveСonsole
             }
             else
             {
-                await _scenarioContextRepository.SetContext(message.From!.Id,context, ct);
+                await _scenarioContextRepository.SetContext(message.From!.Id, context, ct);
             }
 
         }
@@ -71,13 +71,21 @@ namespace InteractiveСonsole
         {
             _update = update;
 
-
-            // Сначала обрабатываем CallbackQuery (если есть)
-            if (update.CallbackQuery != null)
+            await (update switch
             {
-                await HandleCallbackAsync(update.CallbackQuery, ct);
-                return;
-            }
+                { Message: { } message } => OnMessage(update, message, ct),
+                { CallbackQuery: { } callbackQuery } => OnCallbackQuery(update, callbackQuery, ct),
+                _ => OnUnknown(update)
+            });
+
+
+        }
+
+        private Task OnUnknown(Update update) => Task.CompletedTask;
+
+
+        private async Task OnMessage(Update update, Message message, CancellationToken ct)
+        {
 
             // Дальше обычные сообщения
             if (update.Message == null)
@@ -100,7 +108,7 @@ namespace InteractiveСonsole
 
             var context = await _scenarioContextRepository.GetContext(userId, ct);
 
-  
+
 
             if (context != null)
             {
@@ -225,12 +233,17 @@ namespace InteractiveСonsole
                     await _botClient.SendMessage(_update.Message.Chat, ex.Message);
                     break;
                 }
-                
+
             }
+
         }
-            
-            
-        
+
+
+
+
+
+
+
         int ParseAndValidatelnt(string? str, int min, int max)
         {
             if (!int.TryParse(str, out int result))
@@ -259,10 +272,10 @@ namespace InteractiveСonsole
                     long userId = user.Id;
                     string? userName = user.Username;
 
-                    if(await _userService.GetUser(userId) == null)
+                    if (await _userService.GetUser(userId) == null)
                     {
                         user2 = await _userService.RegisterUser(userId, userName);
-                        name =  user2.TelegramUserName;
+                        name = user2.TelegramUserName;
                     }
                     else
                     {
@@ -289,7 +302,7 @@ namespace InteractiveСonsole
                         await _botClient.SendMessage(_update.Message.Chat, "Команда не распознана");
                         return false;
                     }
-                    else 
+                    else
                     {
 
                         var toDoReportService = new ToDoReportService(_toDoRepository);
@@ -328,7 +341,7 @@ namespace InteractiveСonsole
 
                         return false;
                     }
-               
+
                 case "/addtask":
                 case "Добавить задачу":
 
@@ -380,7 +393,7 @@ namespace InteractiveСonsole
 
                         return false;
                     }
-            
+
                 case string command when command.StartsWith("/completetask"):
                     if (string.IsNullOrWhiteSpace(name))
                     {
@@ -535,47 +548,72 @@ namespace InteractiveСonsole
             return false; // не завершает сценарий
         }
 
-        private async Task HandleCallbackAsync(CallbackQuery callback, CancellationToken ct)
+        private async Task OnCallbackQuery(Update update, CallbackQuery callback, CancellationToken ct)
         {
-            var data = callback.Data ?? string.Empty;
+            async Task AnswerIfNeeded()
+            {
+                if (!string.IsNullOrEmpty(callback.Id))
+                    await _botClient.AnswerCallbackQuery(callback.Id, cancellationToken: ct);
+            }
 
-            // Попытка распарсить как ToDoListCallbackDto
+            if (callback.From == null)
+            {
+                await AnswerIfNeeded();
+                return;
+            }
+
+            var registeredUser = await _userService.GetUser(callback.From.Id);
+            if (registeredUser == null)
+            {
+                await AnswerIfNeeded();
+                return;
+            }
+
+            var data = callback.Data ?? string.Empty;
             var dto = ToDoListCallbackDto.FromString(data);
 
-            if (dto.Action == "show")
+            if (dto != null && dto.Action == "show")
             {
-                // Получаем задачи: если ToDoListId == null — без списка, иначе по конкретному списку
-                var items = await _toDoService.GetByUserIdAndList(user2.UserId, dto.ToDoListId, ct) ?? Array.Empty<ToDoItem>();
+                var items = await _toDoService.GetByUserIdAndList(registeredUser.UserId, dto.ToDoListId, ct) ?? Array.Empty<ToDoItem>();
 
-                // Формируем текст для вывода (пустой список — сообщение)
-                string text;
-                if (items.Count == 0)
-                    text = "Список задач пуст!";
+                string text = items.Count == 0
+                    ? "Список задач пуст!"
+                    : "Ваш список задач:\n" + string.Join("\n", items.Select((t, idx) => $"{idx + 1}. {t.Name} - {t.CreateAt} - '{t.Id}'"));
+
+                if (callback.Message != null)
+                    await _botClient.EditMessageText(callback.Message.Chat.Id, callback.Message.MessageId, text, cancellationToken: ct);
                 else
-                    text = "Ваш список задач:\n" + string.Join("\n", items.Select((t, idx) => $"{idx + 1}. {t.Name} - {t.CreateAt} - '{t.Id}'"));
-
-                // Редактируем исходное сообщение с клавиатурой, чтобы показать задачи
-                await _botClient.EditMessageText(callback.Message.Chat.Id, callback.Message.MessageId, text, cancellationToken: ct);
+                    await _botClient.SendMessage(registeredUser.TelegramUserId, text, cancellationToken: ct);
             }
             else if (data == "addlist")
             {
-                // Переключаем контекст в сценарий создания списка
                 var newContext = new ScenarioContext(ScenarioType.AddList);
-                await _scenarioContextRepository.SetContext(callback.From.Id, newContext, ct);
-                await ProcessScenario(newContext, callback.Message, ct);
+                await _scenarioContextRepository.SetContext(registeredUser.TelegramUserId, newContext, ct);
+
+                if (callback.Message != null)
+                    await ProcessScenario(newContext, callback.Message, ct);
+                else
+                    await _botClient.SendMessage(registeredUser.TelegramUserId, "Введите название списка:", cancellationToken: ct);
             }
             else if (data == "deletelist")
             {
-                // Переключаем контекст в сценарий удаления списка
                 var newContext = new ScenarioContext(ScenarioType.DeleteList);
-                await _scenarioContextRepository.SetContext(callback.From.Id, newContext, ct);
-                await ProcessScenario(newContext, callback.Message, ct);
+                await _scenarioContextRepository.SetContext(registeredUser.TelegramUserId, newContext, ct);
+
+                if (callback.Message != null)
+                    await ProcessScenario(newContext, callback.Message, ct);
+                else
+                    await _botClient.SendMessage(registeredUser.TelegramUserId, "Введите название списка для удаления:", cancellationToken: ct);
             }
+
+
+
         }
 
 
-        string Help { get; set; } = "Просто вводи команды\n/start, /help, /info, /exit.\nЕсли авторизовался, то вводи команду /addtask, /show, /remowetask (фрмат ввода '№ задачи'), /completetask (фрмат ввода 'команда id задачи'), /find (вводи часть задачи и получай список задач начинающийся на данное слово), /report (вывод статистики), /cansel (выход из цикла добавления задачи)\nУдачи!!!!!";
-        string Info { get; set; } = "Версия: 2\nДата создания: 14.11.2025\nДата обновления: 08.03.2026";
+            string Help { get; set; } = "Просто вводи команды\n/start, /help, /info, /exit.\nЕсли авторизовался, то вводи команду /addtask, /show, /remowetask (фрмат ввода '№ задачи'), /completetask (фрмат ввода 'команда id задачи'), /find (вводи часть задачи и получай список задач начинающийся на данное слово), /report (вывод статистики), /cansel (выход из цикла добавления задачи)\nУдачи!!!!!";
+            string Info { get; set; } = "Версия: 2\nДата создания: 14.11.2025\nДата обновления: 08.03.2026";
 
+        }
     }
-}
+
