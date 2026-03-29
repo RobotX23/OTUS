@@ -1,4 +1,6 @@
-﻿namespace InteractiveСonsole
+﻿using System.Collections.Generic;
+
+namespace InteractiveСonsole
 {
     /// <summary>
     /// 
@@ -19,6 +21,14 @@
         /// Время создания
         /// </summary>
         public DateTime CreateAt { get; set; }
+
+        public void ToDoListNew(ToDoUser user, string name)
+        {
+            Id = Guid.NewGuid();
+            User = user;
+            Name = name;
+            CreateAt = DateTime.UtcNow;
+        }
 
     }
 }

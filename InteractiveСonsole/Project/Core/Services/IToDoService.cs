@@ -20,5 +20,6 @@ namespace InteractiveСonsole
 
         public int maxtasks { get; set; }
         public int maxline { get; set; }
+        Task<IReadOnlyList<ToDoItem>> GetByUserIdAndList(Guid userId, Guid? listId, CancellationToken ct);
     }
 }

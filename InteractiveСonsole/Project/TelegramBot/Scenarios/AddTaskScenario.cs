@@ -63,9 +63,8 @@ namespace InteractiveСonsole.Project.TelegramBot.Scenarios
                         var name = (string)context.Data["TaskName"];
 
                         ToDoList list = new ToDoList();
-                        list.Name = name;
-                        list.User = user2;
-
+                        list.ToDoListNew(user2, name);
+                        
                         var task = await _todoService.Add(user2, name, deadline, list);
                         await bot.SendMessage(message.Chat.Id, $"Задача \"{task.Name}\" успешно добавлена с дедлайном {task.Deadline:dd.MM.yyyy}.");
 

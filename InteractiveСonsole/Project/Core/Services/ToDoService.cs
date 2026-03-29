@@ -110,5 +110,17 @@ namespace InteractiveСonsole
         {
             return await _toDoRepository.Find(user.UserId, x => x.Name.StartsWith(namePrefix));
         }
+
+        public async Task<IReadOnlyList<ToDoItem>> GetByUserIdAndList(Guid userId, Guid? listId, CancellationToken ct)
+        {
+            var items = await _toDoRepository.GetAllByUserId(userId);
+            if (items == null || items.Count == 0)
+                return Array.Empty<ToDoItem>();
+
+            if (listId == null)
+                return items;
+
+            return items.Where(i => i.List.Id == listId).ToList();
+        }
     }
 }
