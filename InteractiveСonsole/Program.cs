@@ -1,5 +1,6 @@
 ﻿using InteractiveСonsole;
 using InteractiveСonsole.Project.Infrastructure.DataAccess;
+using InteractiveСonsole.Project.TelegramBot.Scenarios;
 using Telegram.Bot;
 using Telegram.Bot.Polling;
 using Telegram.Bot.Types.Enums;
@@ -22,8 +23,14 @@ try
     var toDoService = new ToDoService(toDoRepository, 0, 0);
     var userService = new UserService(userRepository);
     var botClient = new TelegramBotClient(token);
+    var scenarioRepository = new InMemoryScenarioContextRepository();
+    var scenario = new List<IScenario>
+    {
+        new AddTaskScenario(userService, toDoService)
+    };
 
-    var handler = new UpdateHandler(toDoService, userService, toDoRepository, botClient);
+
+    var handler = new UpdateHandler(toDoService, userService, toDoRepository, botClient, scenario, scenarioRepository);
     botClient.StartReceiving(handler);
 
     var me = await botClient.GetMe();

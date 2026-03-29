@@ -1,4 +1,5 @@
 ﻿using InteractiveСonsole.Project.Core.Exceptions;
+using InteractiveСonsole.Project.TelegramBot.Scenarios;
 using Telegram.Bot;
 using Telegram.Bot.Polling;
 using Telegram.Bot.Types;
@@ -17,21 +18,85 @@ namespace InteractiveСonsole
         private readonly IToDoService _toDoService;
         private readonly IUserService _userService;
         private readonly IToDoRepository _toDoRepository;
+        private readonly IEnumerable<IScenario> _scenarios;
+        private readonly IScenarioContextRepository _scenarioContextRepository;
 
-        public UpdateHandler(IToDoService toDoService, IUserService userService, IToDoRepository toDoRepository, ITelegramBotClient botClient)
+        public UpdateHandler(IToDoService toDoService, IUserService userService, IToDoRepository toDoRepository, ITelegramBotClient botClient, IEnumerable<IScenario> scenarios, IScenarioContextRepository scenarioContextRepository)
         {
             _toDoService = toDoService ?? throw new ArgumentNullException(nameof(toDoService));
             _userService = userService ?? throw new ArgumentNullException(nameof(userService));
             _toDoRepository = toDoRepository ?? throw new ArgumentNullException(nameof(toDoRepository));
             _botClient = botClient;
+
+            _scenarios = scenarios;
+            _scenarioContextRepository = scenarioContextRepository;
+        }
+
+
+        private IScenario GetScenario(ScenarioType scenario)
+        {
+            var result = _scenarios.FirstOrDefault(x => x.CanHandle(scenario));
+            if ( result == null)
+            {
+                throw new Exception($"Сценарий {scenario} не найден!");
+            }
+            return result;
+        }
+
+
+
+        private async Task ProcessScenario(ScenarioContext context, Message message, CancellationToken ct)
+        {
+            var scenario = GetScenario(context.CurrentScenario);
+
+            var result = await scenario.HandleMessageAsync(_botClient, context, message, ct);
+
+            if (result == ScenarioResult.Completed)
+            {
+                await _scenarioContextRepository.ResetContext(message.From!.Id, ct);
+                ChangeKeyboard(_update.Message.Chat.Id, _botClient);
+            }
+            else
+            {
+                await _scenarioContextRepository.SetContext(message.From!.Id,context, ct);
+            }
+
         }
 
         bool flag = false;
         public async Task HandleUpdateAsync(ITelegramBotClient botClient, Update update, CancellationToken ct)
         {
             _update = update;
+
+
+            string? textEdit = _update.Message.Text;
+
+            if (textEdit == "/cancel" || textEdit == "Назад")
+            {
+                await _scenarioContextRepository.ResetContext(_update.Message.From!.Id, ct);
+                ChangeKeyboard(_update.Message.Chat.Id, _botClient);
+                return;
+            }
+
+
+            if (update.Message == null)
+                return;
+
+            var userId = _update.Message.From!.Id;
+
+            var context = await _scenarioContextRepository.GetContext(userId, ct);
+
+  
+
+            if (context != null)
+            {
+                await ProcessScenario(context, _update.Message, ct);
+                return;
+            }
+
             while (true)
             {
+
                 try
                 {
                     var taskline = await _toDoService.LineTasks();
@@ -78,18 +143,20 @@ namespace InteractiveСonsole
 
                     var commands = new[]
 {
-                                    new BotCommand{ Command = "start", Description = "Авторизация"},
-                                    new BotCommand{ Command = "help", Description = "Помощь"},
-                                    new BotCommand{ Command = "info", Description = "Информация о релизе"},
-                                    new BotCommand{ Command = "exit", Description = "Выход из сессии"},
-                                    new BotCommand{ Command = "addtask", Description = "Добавить задачу"},
-                                    new BotCommand{ Command = "showtasks", Description = "Вывести активные задачи"},
-                                    new BotCommand{ Command = "remowetask", Description = "Удалить задачу"},
-                                    new BotCommand{ Command = "completetask", Description = "Закрыть задачу"},
-                                    new BotCommand{ Command = "showalltasks", Description = "Вывести все задачи"},
-                                    new BotCommand{ Command = "find", Description = "Поиск задачи по слову"},
-                                    new BotCommand{ Command = "report", Description = "Отчет статистики"}
-                                };
+                                new BotCommand{ Command = "start", Description = "Авторизация"},
+                                new BotCommand{ Command = "help", Description = "Помощь"},
+                                new BotCommand{ Command = "info", Description = "Информация о релизе"},
+                                new BotCommand{ Command = "exit", Description = "Выход из сессии"},
+                                new BotCommand{ Command = "addtask", Description = "Добавить задачу"},
+                                new BotCommand{ Command = "showtasks", Description = "Вывести активные задачи"},
+                                new BotCommand{ Command = "remowetask", Description = "Удалить задачу"},
+                                new BotCommand{ Command = "completetask", Description = "Закрыть задачу"},
+                                new BotCommand{ Command = "showalltasks", Description = "Вывести все задачи"},
+                                new BotCommand{ Command = "find", Description = "Поиск задачи по слову"},
+                                new BotCommand{ Command = "report", Description = "Отчет статистики"},
+                                new BotCommand{ Command = "cansel", Description = "выход из цикла добавления задачи"}
+
+                            };
                     await _botClient.SetMyCommands(commands);
 
 
@@ -97,7 +164,7 @@ namespace InteractiveСonsole
 
 
                     string? text = _update.Message.Text;
-                    if( await Returne(text, ct))
+                    if (await Returne(text, ct))
                     {
                         name = null;
                         user2 = null;
@@ -107,8 +174,8 @@ namespace InteractiveСonsole
                     {
                         break;
                     }
-                    
-                    
+
+
 
 
                 }
@@ -145,6 +212,7 @@ namespace InteractiveСonsole
                     await _botClient.SendMessage(_update.Message.Chat, ex.Message);
                     break;
                 }
+                
             }
         }
             
@@ -247,23 +315,17 @@ namespace InteractiveСonsole
 
                         return false;
                     }
-                case string command when command.StartsWith("/addtask"):
-                    if (string.IsNullOrWhiteSpace(name))
-                    {
-                        await _botClient.SendMessage(_update.Message.Chat, "Команда не распознана");
-                        return false;
-                    }
-                    else
-                    {
-                        List<string> partOne = new List<string>();
-                        partOne.AddRange(command.Split(' ', 2)); //Разделение строки по пробелу после команды
-                        partOne.Add(" ");
-                        ValidateString(partOne[1]);
-                        string task_2 = partOne[1].Trim(); //Используем только вторую часть команды
-                        var task_1 =await _toDoService.Add(user2, task_2); // Вызов переданного метода
-                        await _botClient.SendMessage(_update.Message.Chat, $"Задача \"{task_1.Name}\" успешно добавлена");
-                        return false;
-                    }
+               
+                case "/addtask":
+                case "Добавить задачу":
+
+                    var newContext = new ScenarioContext(ScenarioType.AddTask);
+
+                    await _scenarioContextRepository.SetContext(_update.Message.From!.Id, newContext, ct);
+
+                    await ProcessScenario(newContext, _update.Message, ct);
+                    ChangeKeyboardExid(_update.Message.Chat.Id, _botClient);
+                    return false;
                 case "/showtasks":
                 case "Активные задачи":
                     if (string.IsNullOrWhiteSpace(name))
@@ -446,21 +508,35 @@ namespace InteractiveСonsole
         {
             var newKeyboard = new ReplyKeyboardMarkup(new[]
             {
-            new KeyboardButton("Все задачи"),
-            new KeyboardButton("Активные задачи"),
-            new KeyboardButton("Отчет") // Добавим кнопку для возврата на основное меню
-        })
+                new KeyboardButton("Добавить задачу"),
+                new KeyboardButton("Все задачи"),
+                new KeyboardButton("Активные задачи"),
+                new KeyboardButton("Отчет") // Добавим кнопку для возврата на основное меню
+            })
             {
                 ResizeKeyboard = true
             };
 
-            await botClient.SendMessage(chatId, "Вы авторизованы!", replyMarkup: newKeyboard);
+            await botClient.SendMessage(chatId, "Введите команды", replyMarkup: newKeyboard);
         }
 
 
+        private static async Task ChangeKeyboardExid(long chatId, ITelegramBotClient botClient)
+        {
+            var newKeyboard = new ReplyKeyboardMarkup(new[]
+            {
+                new KeyboardButton("Назад") // Добавим кнопку для возврата на основное меню
+            })
+            {
+                ResizeKeyboard = true
+            };
 
-        string Help { get; set; } = "Просто вводи команды\n/start, /help, /info, /exit.\nЕсли авторизовался, то вводи команду /addtask, /showtasks, /remowetask (фрмат ввода '№ задачи'), /completetask (фрмат ввода 'команда id задачи'), /showalltasks, /find (вводи часть задачи и получай список задач начинающийся на данное слово), /report (вывод статистики)\nУдачи!!!!!";
-        string Info { get; set; } = "Версия: 2\nДата создания: 14.11.2025\nДата обновления: 29.01.2026";
+            await botClient.SendMessage(chatId, "Введите название задачи", replyMarkup: newKeyboard);
+        }
+
+
+        string Help { get; set; } = "Просто вводи команды\n/start, /help, /info, /exit.\nЕсли авторизовался, то вводи команду /addtask, /showtasks, /remowetask (фрмат ввода '№ задачи'), /completetask (фрмат ввода 'команда id задачи'), /showalltasks, /find (вводи часть задачи и получай список задач начинающийся на данное слово), /report (вывод статистики), /cansel (выход из цикла добавления задачи)\nУдачи!!!!!";
+        string Info { get; set; } = "Версия: 2\nДата создания: 14.11.2025\nДата обновления: 08.03.2026";
 
     }
 }
