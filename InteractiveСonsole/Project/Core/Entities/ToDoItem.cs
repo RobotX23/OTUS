@@ -39,7 +39,9 @@ namespace InteractiveСonsole
         /// </summary>
         public DateTime Deadline { get; set; }
 
-        public void ToDoItemNew(ToDoUser user, string name, DateTime deadline) 
+        public ToDoList? List { get; set; }
+
+        public void ToDoItemNew(ToDoUser user, string name, DateTime deadline, ToDoList? list) 
         {
             Id = Guid.NewGuid();
             User = user;
@@ -48,8 +50,7 @@ namespace InteractiveСonsole
             State = ToDoItemState.Active;
             StateChangeAt = null;
             Deadline = deadline;
-
-
+            List = list;
         }
         public void ChangeState (ToDoItemState newStat)
         {
