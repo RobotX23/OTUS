@@ -22,7 +22,7 @@ namespace InteractiveСonsole.Project.TelegramBot.Scenarios
 
         public bool CanHandle(ScenarioType scenario) => scenario == ScenarioType.AddList;
 
-        public async Task<ScenarioResult> HandleMessageAsync(ITelegramBotClient botClient, ScenarioContext context, Message message, CancellationToken ct)
+        public async Task<ScenarioResult> HandleMessageAsync(ITelegramBotClient botClient, ScenarioContext context, Message message, CancellationToken ct, CallbackQuery callbackQuery)
         {
             switch (context.CurretStep)
             {

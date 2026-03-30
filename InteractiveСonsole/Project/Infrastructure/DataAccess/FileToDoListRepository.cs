@@ -14,7 +14,7 @@ namespace InteractiveСonsole.Project.Infrastructure.DataAccess
     {
         private readonly string _baseFolder;
 
-        private string GetFilePath(Guid id) => Path.Combine(_baseFolder, $"{id}.json");
+        private string GetFilePath(Guid? id) => Path.Combine(_baseFolder, $"{id}.json");
 
         public FileToDoListRepository(string baseFolder = "ToDoLists")
         {

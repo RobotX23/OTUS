@@ -48,20 +48,36 @@ namespace InteractiveСonsole
 
 
 
-        private async Task ProcessScenario(ScenarioContext context, Message message, CancellationToken ct)
+        private async Task ProcessScenario(ScenarioContext context, Message message, CancellationToken ct, CallbackQuery callbackQuery)
         {
             var scenario = GetScenario(context.CurrentScenario);
 
-            var result = await scenario.HandleMessageAsync(_botClient, context, message, ct);
+            var result = await scenario.HandleMessageAsync(_botClient, context, message, ct, callbackQuery);
 
             if (result == ScenarioResult.Completed)
             {
-                await _scenarioContextRepository.ResetContext(message.From!.Id, ct);
-                ChangeKeyboard(_update.Message.Chat.Id, _botClient);
+                if (message == null)
+                {
+                    await _scenarioContextRepository.ResetContext(callbackQuery.From!.Id, ct);
+                    var registeredUser = await _userService.GetUser(callbackQuery.From.Id);
+                    ChangeKeyboard(registeredUser.TelegramUserId, _botClient);
+                }
+                else
+                {
+                    await _scenarioContextRepository.ResetContext(message.From!.Id, ct);
+                    ChangeKeyboard(_update.Message.Chat.Id, _botClient);
+                }
             }
             else
             {
-                await _scenarioContextRepository.SetContext(message.From!.Id, context, ct);
+                if (message == null)
+                {
+                    await _scenarioContextRepository.SetContext(callbackQuery.From!.Id, context, ct);
+                }
+                else
+                {
+                    await _scenarioContextRepository.SetContext(message.From!.Id, context, ct);
+                }
             }
 
         }
@@ -70,6 +86,33 @@ namespace InteractiveСonsole
         public async Task HandleUpdateAsync(ITelegramBotClient botClient, Update update, CancellationToken ct)
         {
             _update = update;
+
+            long userId = 0;
+
+            if (_update.Message == null)
+            {
+                userId = _update.CallbackQuery.From!.Id;
+
+                var context = await _scenarioContextRepository.GetContext(userId, ct);
+
+                if (context != null)
+                {
+                    await ProcessScenario(context, _update.Message, ct, _update.CallbackQuery);
+                    return;
+                }
+            }
+            else
+            {
+                userId = _update.Message.From!.Id;
+
+                var context = await _scenarioContextRepository.GetContext(userId, ct);
+
+                if (context != null)
+                {
+                    await ProcessScenario(context, _update.Message, ct, _update.CallbackQuery);
+                    return;
+                }
+            }
 
             await (update switch
             {
@@ -104,17 +147,8 @@ namespace InteractiveСonsole
             if (update.Message == null)
                 return;
 
-            var userId = _update.Message.From!.Id;
-
-            var context = await _scenarioContextRepository.GetContext(userId, ct);
 
 
-
-            if (context != null)
-            {
-                await ProcessScenario(context, _update.Message, ct);
-                return;
-            }
 
             while (true)
             {
@@ -170,7 +204,7 @@ namespace InteractiveСonsole
                                 new BotCommand{ Command = "info", Description = "Информация о релизе"},
                                 new BotCommand{ Command = "exit", Description = "Выход из сессии"},
                                 new BotCommand{ Command = "addtask", Description = "Добавить задачу"},
-                                new BotCommand{ Command = "show", Description = "Вывести активные задачи"},
+                                new BotCommand{ Command = "show", Description = "Вывести задачи"},
                                 new BotCommand{ Command = "remowetask", Description = "Удалить задачу"},
                                 new BotCommand{ Command = "completetask", Description = "Закрыть задачу"},
                                 new BotCommand{ Command = "find", Description = "Поиск задачи по слову"},
@@ -349,11 +383,11 @@ namespace InteractiveСonsole
 
                     await _scenarioContextRepository.SetContext(_update.Message.From!.Id, newContext, ct);
 
-                    await ProcessScenario(newContext, _update.Message, ct);
+                    await ProcessScenario(newContext, _update.Message, ct, _update.CallbackQuery);
                     ChangeKeyboardExid(_update.Message.Chat.Id, _botClient);
                     return false;
                 case "/show":
-                case "Активные задачи":
+                case "Задачи":
                     return await HandleShowCommandAsync(ct);
                 case string command when command.StartsWith("/remowetask"):
                     if (string.IsNullOrWhiteSpace(name))
@@ -484,8 +518,7 @@ namespace InteractiveСonsole
             var newKeyboard = new ReplyKeyboardMarkup(new[]
             {
                 new KeyboardButton("Добавить задачу"),
-                new KeyboardButton("Все задачи"),
-                new KeyboardButton("Активные задачи"),
+                new KeyboardButton("Задачи"),
                 new KeyboardButton("Отчет") // Добавим кнопку для возврата на основное меню
             })
             {
@@ -574,7 +607,17 @@ namespace InteractiveСonsole
 
             if (dto != null && dto.Action == "show")
             {
-                var items = await _toDoService.GetByUserIdAndList(registeredUser.UserId, dto.ToDoListId, ct) ?? Array.Empty<ToDoItem>();
+                Guid? id = Guid.Empty;
+                if (dto.ToDoListId == null)
+                {
+                    id = Guid.Empty;
+                }
+                else
+                {
+                    id = dto.ToDoListId;
+                }
+
+                    var items = await _toDoService.GetByUserIdAndList(registeredUser.UserId, id, ct) ?? Array.Empty<ToDoItem>();
                 string text = items.Count == 0
                     ? "Список задач пуст!"
                     : "Ваш список задач:\n" + string.Join("\n", items.Select((t, idx) => $"{idx + 1}. {t.Name} - {t.CreateAt} - '{t.Id}'"));
@@ -594,7 +637,7 @@ namespace InteractiveСonsole
                 await _scenarioContextRepository.SetContext(registeredUser.TelegramUserId, newContext, ct);
 
                 if (callback.Message != null)
-                    await ProcessScenario(newContext, callback.Message, ct);
+                    await ProcessScenario(newContext, callback.Message, ct, _update.CallbackQuery);
                 else
                     await _botClient.SendMessage(registeredUser.TelegramUserId, "Введите название списка:", cancellationToken: ct);
                 return;
@@ -608,9 +651,7 @@ namespace InteractiveСonsole
                 {
                     // используем существующий контекст
                     if (callback.Message != null)
-                        await ProcessScenario(existingCtx, callback.Message, ct);
-                    else
-                        await _botClient.SendMessage(registeredUser.TelegramUserId, "Выберете список для удаления:", cancellationToken: ct);
+                        await ProcessScenario(existingCtx, callback.Message, ct, _update.CallbackQuery);
                     await AnswerIfNeeded();
                 }
                 else
@@ -620,124 +661,19 @@ namespace InteractiveСonsole
                     await _scenarioContextRepository.SetContext(registeredUser.TelegramUserId, newContext, ct);
 
                     if (callback.Message != null)
-                        await ProcessScenario(newContext, callback.Message, ct);
-                    else
-                        await _botClient.SendMessage(registeredUser.TelegramUserId, "Выберете список для удаления:", cancellationToken: ct);
+                        await ProcessScenario(newContext, callback.Message, ct, _update.CallbackQuery);
 
                     await AnswerIfNeeded();
                     return;
                 }
             }
 
-
-            if (dto != null && dto.Action == "deletelist" && dto.ToDoListId != Guid.Empty)
-            {
-                // Получаем список (вариант: GetById или искать в GetUserLists)
-                var all = await _toDoListService.GetUserLists(registeredUser.UserId, ct) ?? Array.Empty<ToDoList>();
-                var selected = all.FirstOrDefault(l => l.Id == dto.ToDoListId);
-
-                if (selected == null)
-                {
-                    if (callback.Message != null)
-                        await _botClient.EditMessageText(callback.Message.Chat.Id, callback.Message.MessageId, "Неверный список.", cancellationToken: ct);
-                    else
-                        await _botClient.SendMessage(registeredUser.TelegramUserId, "Неверный список.", cancellationToken: ct);
-
-                    await AnswerIfNeeded();
-                    return;
-                }
-
-                // Создаём/обновляем контекст сценария DeleteList и сохраняем выбранный список
-                var ctx = new ScenarioContext(ScenarioType.DeleteList) { CurretStep = "Delete" };
-                ctx.Data = ctx.Data ?? new Dictionary<string, object>();
-                ((Dictionary<string, object>)ctx.Data!)["list"] = selected;
-                ((Dictionary<string, object>)ctx.Data!)["user"] = registeredUser;
-                await _scenarioContextRepository.SetContext(registeredUser.TelegramUserId, ctx, ct);
-
-                var confirm = new InlineKeyboardMarkup(new[]
-                {
-            InlineKeyboardButton.WithCallbackData("✅Да", "yes"),
-            InlineKeyboardButton.WithCallbackData("❌Нет", "no")
-        });
-
-                if (callback.Message != null)
-                    await _botClient.EditMessageText(callback.Message.Chat.Id, callback.Message.MessageId,
-                        $"Подтверждаете удаление списка {selected.Name} и всех его задач?", replyMarkup: confirm, cancellationToken: ct);
-                else
-                    await _botClient.SendMessage(registeredUser.TelegramUserId,
-                        $"Подтверждаете удаление списка {selected.Name} и всех его задач?", replyMarkup: confirm, cancellationToken: ct);
-
-                await AnswerIfNeeded();
-                return;
-            }
-
-            // Подтверждение yes/no на шаге Delete
-            if (data == "yes" || data == "no")
-            {
-                var ctx = await _scenarioContextRepository.GetContext(registeredUser.TelegramUserId, ct);
-                if (ctx == null || ctx.CurrentScenario != ScenarioType.DeleteList)
-                {
-                    await AnswerIfNeeded();
-                    return;
-                }
-
-                ToDoList? toDoList = null;
-                if (ctx.Data is Dictionary<string, object> dict)
-                {
-                    if (dict.TryGetValue("list", out var obj) && obj is ToDoList listFromDict)
-                        toDoList = listFromDict;
-                }
-
-                if (toDoList == null)
-                {
-                    if (callback.Message != null)
-                        await _botClient.EditMessageText(callback.Message.Chat.Id, callback.Message.MessageId, "Не удалось найти список в контексте.", cancellationToken: ct);
-                    else
-                        await _botClient.SendMessage(registeredUser.TelegramUserId, "Не удалось найти список в контексте.", cancellationToken: ct);
-
-                    await _scenarioContextRepository.ResetContext(registeredUser.TelegramUserId, ct);
-                    await AnswerIfNeeded();
-                    return;
-                }
-
-                if (data == "no")
-                {
-                    if (callback.Message != null)
-                        await _botClient.EditMessageText(callback.Message.Chat.Id, callback.Message.MessageId, "Удаление отменено.", cancellationToken: ct);
-                    else
-                        await _botClient.SendMessage(registeredUser.TelegramUserId, "Удаление отменено.", cancellationToken: ct);
-
-                    await _scenarioContextRepository.ResetContext(registeredUser.TelegramUserId, ct);
-                    await AnswerIfNeeded();
-                    return;
-                }
-
-                // yes — удаляем задачи и список
-                var items = await _toDoService.GetByUserIdAndList(registeredUser.UserId, toDoList.Id, ct) ?? Array.Empty<ToDoItem>();
-                foreach (var it in items)
-                    await _toDoService.Delete(it.Id);
-
-                await _toDoListService.Delete(toDoList.Id, ct);
-
-                if (callback.Message != null)
-                    await _botClient.EditMessageText(callback.Message.Chat.Id, callback.Message.MessageId,
-                        $"Список {toDoList.Name} и все его задачи были удалены.", cancellationToken: ct);
-                else
-                    await _botClient.SendMessage(registeredUser.TelegramUserId,
-                        $"Список {toDoList.Name} и все его задачи были удалены.", cancellationToken: ct);
-
-                await _scenarioContextRepository.ResetContext(registeredUser.TelegramUserId, ct);
-                await AnswerIfNeeded();
-                return;
-            }
-
-            await AnswerIfNeeded();
 
         }
 
 
-            string Help { get; set; } = "Просто вводи команды\n/start, /help, /info, /exit.\nЕсли авторизовался, то вводи команду /addtask, /show, /remowetask (фрмат ввода '№ задачи'), /completetask (фрмат ввода 'команда id задачи'), /find (вводи часть задачи и получай список задач начинающийся на данное слово), /report (вывод статистики), /cansel (выход из цикла добавления задачи)\nУдачи!!!!!";
-            string Info { get; set; } = "Версия: 2\nДата создания: 14.11.2025\nДата обновления: 08.03.2026";
+            string Help { get; set; } = "Просто вводи команды\n/start, /help, /info, /exit.\nЕсли авторизовался, то вводи команду /addtask, /show (вывод списка задач), /remowetask (фрмат ввода '№ задачи'), /completetask (фрмат ввода 'команда id задачи'), /find (вводи часть задачи и получай список задач начинающийся на данное слово), /report (вывод статистики), /cansel (выход из цикла добавления задачи)\nУдачи!!!!!";
+            string Info { get; set; } = "Версия: 2\nДата создания: 14.11.2025\nДата обновления: 30.03.2026";
 
         }
     }

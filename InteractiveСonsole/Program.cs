@@ -29,9 +29,9 @@ try
     var toDoListServace = new ToDoListService(toDoListRepository);
     var scenario = new List<IScenario>
     {
-        new AddTaskScenario(userService, toDoService),
+        new AddTaskScenario(userService, toDoService, toDoListServace),
         new AddListScenario(userService, toDoListServace),
-        new DeleteListScenario(userService, toDoListServace, toDoService)
+        new DeleteListScenario(userService, toDoListServace, toDoService,scenarioRepository)
     };
 
 

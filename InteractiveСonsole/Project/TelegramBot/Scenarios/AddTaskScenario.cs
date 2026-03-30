@@ -1,6 +1,10 @@
 ﻿
+using InteractiveСonsole.Project.Core.Services;
+using InteractiveСonsole.Project.TelegramBot.Dto;
+using Microsoft.VisualBasic;
 using Telegram.Bot;
 using Telegram.Bot.Types;
+using Telegram.Bot.Types.ReplyMarkups;
 
 namespace InteractiveСonsole.Project.TelegramBot.Scenarios
 {
@@ -8,11 +12,13 @@ namespace InteractiveСonsole.Project.TelegramBot.Scenarios
     {
         private readonly IUserService _userService;
         private readonly IToDoService _todoService;
+        private readonly IToDoListService _todoListService;
 
-        public AddTaskScenario(IUserService userService, IToDoService todoService)
+        public AddTaskScenario(IUserService userService, IToDoService todoService, IToDoListService toDoListService)
         {
             _userService = userService;
             _todoService = todoService;
+            _todoListService = toDoListService;
         }
 
         public bool CanHandle(ScenarioType scenario)
@@ -20,7 +26,7 @@ namespace InteractiveСonsole.Project.TelegramBot.Scenarios
             return scenario == ScenarioType.AddTask;
         }
 
-        public async Task<ScenarioResult> HandleMessageAsync(ITelegramBotClient bot, ScenarioContext context, Message message, CancellationToken ct)
+        public async Task<ScenarioResult> HandleMessageAsync(ITelegramBotClient bot, ScenarioContext context, Message message, CancellationToken ct, CallbackQuery callbackQuery)
         {
             switch (context.CurretStep)
             {
@@ -52,33 +58,117 @@ namespace InteractiveСonsole.Project.TelegramBot.Scenarios
                     return ScenarioResult.Transition;
 
                 case "Deadline": // Пользователь ввел дату
-                    if (DateTime.TryParseExact(message.Text, "dd.MM.yyyy", null, System.Globalization.DateTimeStyles.None, out var deadline))
+                    if (!DateTime.TryParseExact(message.Text, "dd.MM.yyyy", null, System.Globalization.DateTimeStyles.None, out var deadline))
                     {
-                        if(deadline.Date < DateTime.Now)
-                        {
-                            await bot.SendMessage(message.Chat.Id, "Дедлайн не может быть в прошлом. Пожалуста введите дату в будующем");
-                            return ScenarioResult.Transition;
-                        }
-                        var user2 = (ToDoUser)context.Data["user"];
-                        var name = (string)context.Data["TaskName"];
-
-                        ToDoList list = new ToDoList();
-                        list.ToDoListNew(user2, name);
-                        
-                        var task = await _todoService.Add(user2, name, deadline, list);
-                        await bot.SendMessage(message.Chat.Id, $"Задача \"{task.Name}\" успешно добавлена с дедлайном {task.Deadline:dd.MM.yyyy}.");
-
-                        return ScenarioResult.Completed;
-                    }
-                    else 
-                    {
-                        await bot.SendMessage(message.Chat.Id, "Неверный формат даты. Пожалуйста, введите дату в формате dd.MM.yyyy:");
+                        await bot.SendMessage(message.Chat.Id, "Неверный формат даты. Пожалуйста, введите дату в формате dd.MM.yyyy:", cancellationToken: ct);
                         return ScenarioResult.Transition;
                     }
 
+                    if (deadline.Date < DateTime.Now.Date)
+                    {
+                        await bot.SendMessage(message.Chat.Id, "Дедлайн не может быть в прошлом. Пожалуйста введите дату в будущем:", cancellationToken: ct);
+                        return ScenarioResult.Transition;
+                    }
+
+                    context.Data["Deadline"] = deadline;
+
+
+                    var user2 = (ToDoUser)context.Data["user"];
+                    // Получаем списки пользователя 
+                    var lists = await _todoListService.GetUserLists(user2.UserId, ct) ?? Array.Empty<ToDoList>();
+
+                    // Список рядов кнопок для InlineKeyboardMarkup
+                    var rows = new List<IEnumerable<InlineKeyboardButton>>();
+
+                    // Кнопка "📌Без списка" — Action = "show", ToDoListId = null
+                    var noListDto = new ToDoListCallbackDto { Action = "show", ToDoListId = null };
+                    rows.Add(new[] { InlineKeyboardButton.WithCallbackData("📌Без списка", noListDto.ToString()) });
+                    // Кнопки для каждого списка пользователя — Action = "show", ToDoListId = list.Id
+                    foreach (var l in lists)
+                    {
+                        var dto1 = new ToDoListCallbackDto { Action = "show", ToDoListId = l.Id };
+                        var callback = dto1.ToString();
+
+                        // Если длина callbackData превышает 64 — используем короткий формат Guid без дефисов
+                        if (callback.Length > 64)
+                            callback = $"{dto1.Action}|{l.Id.ToString("N")}";
+
+                        rows.Add(new[] { InlineKeyboardButton.WithCallbackData(l.Name, callback) });
+                    }
+
+                    var markup = new InlineKeyboardMarkup(rows);
+
+                    // Отправляем сообщение с клавиатурой
+                    await bot.SendMessage(message.Chat.Id, "Выберите список для задачи:", replyMarkup: markup, cancellationToken: ct);
+
+                    context.CurretStep = "SelectList";
+                    return ScenarioResult.Transition;
+
+                case "SelectList": // Пользователь вводит название нового списка
+                    var data = callbackQuery.Data ?? string.Empty;
+                    var dto = ToDoListCallbackDto.FromString(data);
+
+
+                    var listName = dto.ToDoListId;
+
+
+                    if (listName == null)
+                    {
+                        var user4 = (ToDoUser)context.Data["user"];
+                        // Создаём список через сервис
+                        ToDoList newList1 = new ToDoList();
+                        newList1.Name = null;
+                        newList1.User = null;
+                        newList1.Id = Guid.Empty;
+
+                        // Продолжаем — создаём задачу
+                        var nameForTask1 = (string)context.Data["TaskName"];
+                        var dl1 = (DateTime)context.Data["Deadline"];
+
+                        var task1 = await _todoService.Add(user4, nameForTask1, dl1, newList1);
+                        var registeredUser1 = await _userService.GetUser(callbackQuery.From.Id);
+                        await bot.SendMessage(registeredUser1.TelegramUserId, $"Задача \"{task1.Name}\" успешно добавлена без списка с дедлайном {task1.Deadline:dd.MM.yyyy}.", cancellationToken: ct);
+
+                        return ScenarioResult.Completed;
+                    }
+                    else
+                    {
+
+                        var name = _todoListService.Get((Guid)listName, ct).Result;
+
+
+                        if (string.IsNullOrWhiteSpace(name.Name))
+                        {
+                            await bot.SendMessage(message.Chat.Id, "Название списка не может быть пустым. Попробуйте ещё раз:", cancellationToken: ct);
+                            return ScenarioResult.Transition;
+                        }
+
+                        var user3 = (ToDoUser)context.Data["user"];
+                        // Создаём список через сервис
+                        ToDoList newList = new ToDoList();
+                        newList.Name = name.Name;
+                        newList.Id = name.Id;
+                        newList.User = name.User;
+                        newList.CreateAt = name.CreateAt;
+
+                        // Продолжаем — создаём задачу
+                        var nameForTask = (string)context.Data["TaskName"];
+                        var dl = (DateTime)context.Data["Deadline"];
+
+                        var task = await _todoService.Add(user3, nameForTask, dl, newList);
+                        var registeredUser = await _userService.GetUser(callbackQuery.From.Id);
+                        await bot.SendMessage(registeredUser.TelegramUserId, $"Задача \"{task.Name}\" успешно добавлена в список \"{newList.Name}\" с дедлайном {task.Deadline:dd.MM.yyyy}.", cancellationToken: ct);
+
+                        return ScenarioResult.Completed;
+                    }
+
+                default:
+                    await bot.SendMessage(message.Chat.Id, "Неподдерживаемый шаг сценария.", cancellationToken: ct);
+                    return ScenarioResult.Completed;
             }
-            return ScenarioResult.Completed;
         }
+
+       
 
     }
 }
