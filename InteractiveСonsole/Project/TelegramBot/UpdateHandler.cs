@@ -56,7 +56,7 @@ namespace InteractiveСonsole
 
             if (result == ScenarioResult.Completed)
             {
-                if (message == null)
+                if (message.From!.Id == null)
                 {
                     await _scenarioContextRepository.ResetContext(callbackQuery.From!.Id, ct);
                     var registeredUser = await _userService.GetUser(callbackQuery.From.Id);
@@ -64,8 +64,18 @@ namespace InteractiveСonsole
                 }
                 else
                 {
-                    await _scenarioContextRepository.ResetContext(message.From!.Id, ct);
-                    ChangeKeyboard(_update.Message.Chat.Id, _botClient);
+                    if (_update.Message == null)
+                    {
+                        await _scenarioContextRepository.ResetContext(callbackQuery.From!.Id, ct);
+                        var registeredUser = await _userService.GetUser(callbackQuery.From.Id);
+                        ChangeKeyboard(registeredUser.TelegramUserId, _botClient);
+                    }
+                    else
+                    {
+                        await _scenarioContextRepository.ResetContext(message.From!.Id, ct);
+                        ChangeKeyboard(_update.Message.Chat.Id, _botClient);
+
+                    }
                 }
             }
             else
@@ -135,14 +145,6 @@ namespace InteractiveСonsole
                 return;
 
             string? textEdit = _update.Message.Text;
-
-            if (textEdit == "/cancel" || textEdit == "Назад")
-            {
-                await _scenarioContextRepository.ResetContext(_update.Message.From!.Id, ct);
-                ChangeKeyboard(_update.Message.Chat.Id, _botClient);
-                return;
-            }
-
 
             if (update.Message == null)
                 return;
@@ -384,11 +386,13 @@ namespace InteractiveСonsole
                     await _scenarioContextRepository.SetContext(_update.Message.From!.Id, newContext, ct);
 
                     await ProcessScenario(newContext, _update.Message, ct, _update.CallbackQuery);
-                    ChangeKeyboardExid(_update.Message.Chat.Id, _botClient);
+                    var scenari = newContext.CurrentScenario;
+                    ChangeKeyboardExid(_update.Message.Chat.Id, _botClient, scenari);
                     return false;
                 case "/show":
                 case "Задачи":
-                    return await HandleShowCommandAsync(ct);
+                    await HandleShowCommandAsync(ct);
+                    return false;
                 case string command when command.StartsWith("/remowetask"):
                     if (string.IsNullOrWhiteSpace(name))
                     {
@@ -529,7 +533,7 @@ namespace InteractiveСonsole
         }
 
 
-        private static async Task ChangeKeyboardExid(long chatId, ITelegramBotClient botClient)
+        private static async Task ChangeKeyboardExid(long chatId, ITelegramBotClient botClient, ScenarioType scenarioType)
         {
             var newKeyboard = new ReplyKeyboardMarkup(new[]
             {
@@ -539,7 +543,10 @@ namespace InteractiveСonsole
                 ResizeKeyboard = true
             };
 
-            await botClient.SendMessage(chatId, "Введите название задачи", replyMarkup: newKeyboard);
+            if (scenarioType == ScenarioType.AddTask)
+                await botClient.SendMessage(chatId, "Введите название задачи", replyMarkup: newKeyboard);
+            if(scenarioType == ScenarioType.AddList)
+                await botClient.SendMessage(chatId, "Введите название списка:", replyMarkup: newKeyboard);
         }
 
 
@@ -640,6 +647,10 @@ namespace InteractiveСonsole
                     await ProcessScenario(newContext, callback.Message, ct, _update.CallbackQuery);
                 else
                     await _botClient.SendMessage(registeredUser.TelegramUserId, "Введите название списка:", cancellationToken: ct);
+
+                var scenario = newContext.CurrentScenario;
+
+                ChangeKeyboardExid(registeredUser.TelegramUserId, _botClient, scenario);
                 return;
             }
 

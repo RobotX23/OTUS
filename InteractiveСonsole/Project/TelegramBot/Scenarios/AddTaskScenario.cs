@@ -46,6 +46,9 @@ namespace InteractiveСonsole.Project.TelegramBot.Scenarios
 
                 case "Name": // Пользователь ввел название задачи
                     var taskName = message.Text?.Trim();
+                    if (taskName == "Назад")
+                        return ScenarioResult.Completed;
+
                     if (string.IsNullOrWhiteSpace(taskName))
                     {
                         await bot.SendMessage(message.Chat.Id, "Название задачи не может быть пустым. Попробуйте еще раз:");
@@ -58,6 +61,8 @@ namespace InteractiveСonsole.Project.TelegramBot.Scenarios
                     return ScenarioResult.Transition;
 
                 case "Deadline": // Пользователь ввел дату
+                    if (message.Text == "Назад")
+                        return ScenarioResult.Completed;
                     if (!DateTime.TryParseExact(message.Text, "dd.MM.yyyy", null, System.Globalization.DateTimeStyles.None, out var deadline))
                     {
                         await bot.SendMessage(message.Chat.Id, "Неверный формат даты. Пожалуйста, введите дату в формате dd.MM.yyyy:", cancellationToken: ct);
@@ -105,6 +110,9 @@ namespace InteractiveСonsole.Project.TelegramBot.Scenarios
                     return ScenarioResult.Transition;
 
                 case "SelectList": // Пользователь вводит название нового списка
+                    if (message.Text == "Назад")
+                        return ScenarioResult.Completed;
+                    
                     var data = callbackQuery.Data ?? string.Empty;
                     var dto = ToDoListCallbackDto.FromString(data);
 

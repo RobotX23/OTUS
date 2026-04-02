@@ -29,11 +29,12 @@ namespace InteractiveСonsole.Project.TelegramBot.Scenarios
                 case null:
                     var user = await _userService.GetUser(message.From!.Id);
                     context.Data["user"] = user;
-                    await botClient.SendMessage(message.Chat.Id, "Введите название списка:", cancellationToken: ct);
                     context.CurretStep = "Name";
                     return ScenarioResult.Transition;
 
                 case "Name":
+                    if (message.Text == "Назад")
+                        return ScenarioResult.Completed;
                     ValidateName(message.Text);
                     var dict = (Dictionary<string, object>)context.Data!;
                     if (!dict.TryGetValue("user", out var userObj) || userObj is not ToDoUser toDoUser)

@@ -52,8 +52,6 @@ namespace InteractiveСonsole.Project.TelegramBot.Scenarios
                     if (noListCallback.Length > 64)
                         noListCallback = $"{noListDto.Action}|{Guid.Empty.ToString("N")}";
 
-                    rows.Add(new[] { InlineKeyboardButton.WithCallbackData("📌Без списка", noListCallback) });
-
                     if (!rows.Any())
                     {
                         await botClient.SendMessage(message.Chat.Id, "Списков нет.", cancellationToken: ct);
@@ -61,12 +59,24 @@ namespace InteractiveСonsole.Project.TelegramBot.Scenarios
                     }
 
                     var markup = new InlineKeyboardMarkup(rows);
+
+
+                    var newKeyboard = new ReplyKeyboardMarkup(new[]
+                    {
+                    new KeyboardButton("Назад") // Добавим кнопку для возврата на основное меню
+                    })
+                    {
+                        ResizeKeyboard = true
+                    };
+                    await botClient.SendMessage(message.Chat.Id, "Режим удаление задач", replyMarkup: newKeyboard);
                     await botClient.SendMessage(message.Chat.Id, "Выберете список для удаления:", replyMarkup: markup, cancellationToken: ct);
 
                     context.CurretStep = "Approve";
                     return ScenarioResult.Transition;
 
                 case "Approve":
+                    if (message.Text == "Назад")
+                        return ScenarioResult.Completed;
                     // Ожидаем callback; сюда может прийти Message если пользователь ввёл текст — игнорируем
                     var data = callbackQuery.Data ?? string.Empty;
                     var dto = ToDoListCallbackDto.FromString(data);
@@ -74,34 +84,6 @@ namespace InteractiveСonsole.Project.TelegramBot.Scenarios
                     // Получаем список (вариант: GetById или искать в GetUserLists)
                     var all = await _toDoListService.GetUserLists(registeredUser.UserId, ct) ?? Array.Empty<ToDoList>();
                     var selected = all.FirstOrDefault(l => l.Id == dto.ToDoListId);
-
-                    if (selected == null)
-                    {
-                        // Создаём/обновляем контекст сценария DeleteList и сохраняем выбранный список
-                        var ctx1 = new ScenarioContext(ScenarioType.DeleteList) { CurretStep = "Delete" };
-                        ctx1.Data = ctx1.Data ?? new Dictionary<string, object>();
-                        ((Dictionary<string, object>)ctx1.Data!)["list"] = "📌Без списка";
-                        ((Dictionary<string, object>)ctx1.Data!)["user"] = registeredUser;
-                        await _scenarioContextRepository.SetContext(registeredUser.TelegramUserId, ctx1, ct);
-
-                        var confirm1 = new InlineKeyboardMarkup(new[]
-                        {
-            InlineKeyboardButton.WithCallbackData("✅Да", "yes"),
-            InlineKeyboardButton.WithCallbackData("❌Нет", "no")
-        });
-
-                        if (callbackQuery.Message != null)
-                            await botClient.EditMessageText(callbackQuery.Message.Chat.Id, callbackQuery.Message.MessageId,
-                                $"Подтверждаете удаление списка \"📌Без списка\" и всех его задач?", replyMarkup: confirm1, cancellationToken: ct);
-                        else
-                            await botClient.SendMessage(registeredUser.TelegramUserId,
-                                $"Подтверждаете удаление списка \"📌Без списка\" и всех его задач?", replyMarkup: confirm1, cancellationToken: ct);
-
-                        Name = Guid.Empty;
-
-                        context.CurretStep = "Delete";
-                        return ScenarioResult.Transition;
-                    }
 
                     // Создаём/обновляем контекст сценария DeleteList и сохраняем выбранный список
                     var ctx = new ScenarioContext(ScenarioType.DeleteList) { CurretStep = "Delete" };
@@ -130,6 +112,8 @@ namespace InteractiveСonsole.Project.TelegramBot.Scenarios
                     context.CurretStep = "Delete";
                     return ScenarioResult.Transition;
                 case "Delete":
+                    if (message.Text == "Назад")
+                        return ScenarioResult.Completed;
                     var data1 = callbackQuery.Data ?? string.Empty;
                     registeredUser = await _userService.GetUser(callbackQuery.From.Id);
 
@@ -156,33 +140,19 @@ namespace InteractiveСonsole.Project.TelegramBot.Scenarios
                         foreach (var it in items)
                             await _toDoService.Delete(it.Id);
 
-                        if (lol != Guid.Empty)
-                        {
-                            await _toDoListService.Delete(lol, ct);
+                        var names = await _toDoListService.Get(lol, ct);
 
-                            var Names = items.FirstOrDefault(x => x.List.Id == lol).Name;
+                        await _toDoListService.Delete(lol, ct);
 
-                            if (callbackQuery.Message != null)
-                                await botClient.EditMessageText(callbackQuery.Message.Chat.Id, callbackQuery.Message.MessageId,
-                                    $"Список {Names} и все его задачи были удалены.", cancellationToken: ct);
-                            else
-                                await botClient.SendMessage(registeredUser.TelegramUserId,
-                                    $"Список {Names} и все его задачи были удалены.", cancellationToken: ct);
 
-                            await _scenarioContextRepository.ResetContext(registeredUser.TelegramUserId, ct);
+                        if (callbackQuery.Message != null)
+                            await botClient.EditMessageText(callbackQuery.Message.Chat.Id, callbackQuery.Message.MessageId,
+                                $"Список {names.Name} и все его задачи были удалены.", cancellationToken: ct);
+                        else
+                            await botClient.SendMessage(registeredUser.TelegramUserId,
+                                $"Список {names.Name} и все его задачи были удалены.", cancellationToken: ct);
 
-                        }
-                        else 
-                        {
-                            if (callbackQuery.Message != null)
-                                await botClient.EditMessageText(callbackQuery.Message.Chat.Id, callbackQuery.Message.MessageId,
-                                    $"Список \"📌Без списка\" и все его задачи были удалены.", cancellationToken: ct);
-                            else
-                                await botClient.SendMessage(registeredUser.TelegramUserId,
-                                    $"Список \"📌Без списка\" и все его задачи были удалены.", cancellationToken: ct);
-
-                            await _scenarioContextRepository.ResetContext(registeredUser.TelegramUserId, ct);
-                        }
+                        await _scenarioContextRepository.ResetContext(registeredUser.TelegramUserId, ct);
 
                         
                     }
