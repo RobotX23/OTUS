@@ -22,7 +22,7 @@ namespace InteractiveСonsole
         /// </summary>
         public DateTime CreateAt { get; set; }
 
-        public void ToDoListNew(ToDoUser user, string name)
+        public ToDoList(ToDoUser user, string name)
         {
             Id = Guid.NewGuid();
             User = user;

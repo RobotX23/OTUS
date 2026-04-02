@@ -139,10 +139,8 @@ namespace InteractiveСonsole.Project.TelegramBot.Scenarios
                         }
                         var user3 = (ToDoUser)context.Data["user"];
                         // Создаём список через сервис
-                        ToDoList newList = new ToDoList();
-                        newList.Name = name.Name;
+                        ToDoList newList = new ToDoList(name.User, name.Name);
                         newList.Id = name.Id;
-                        newList.User = name.User;
                         newList.CreateAt = name.CreateAt;
 
                         await TaskAdd(context, bot, callbackQuery, ct, newList);

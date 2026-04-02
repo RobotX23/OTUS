@@ -23,13 +23,7 @@ namespace InteractiveСonsole.Project.Core.Services
             if (await _repo.ExistsByName(user.UserId, name, ct))
                 throw new InvalidOperationException("У пользователя уже есть список с таким имененм.");
 
-            var list = new ToDoList
-            {
-                Id = Guid.NewGuid(),
-                User = user,
-                Name = name,
-                CreateAt = DateTime.UtcNow
-            };
+            var list = new ToDoList(user, name);
 
             await _repo.Add(list, ct);
             return list;
