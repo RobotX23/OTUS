@@ -3,6 +3,7 @@ using InteractiveСonsole.Project.Core.Services;
 using InteractiveСonsole.Project.TelegramBot.Dto;
 using Microsoft.VisualBasic;
 using System;
+using System.Threading.Tasks;
 using Telegram.Bot;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.ReplyMarkups;
@@ -122,7 +123,7 @@ namespace InteractiveСonsole.Project.TelegramBot.Scenarios
 
                     if (listName == null)
                     {
-                        await TaskAdd(context, bot, callbackQuery, ct);
+                        await TaskAdd(context, bot, callbackQuery, ct, null);
                         return ScenarioResult.Completed;
                     }
                     else
@@ -136,8 +137,15 @@ namespace InteractiveСonsole.Project.TelegramBot.Scenarios
                             await bot.SendMessage(message.Chat.Id, "Название списка не может быть пустым. Попробуйте ещё раз:", cancellationToken: ct);
                             return ScenarioResult.Transition;
                         }
+                        var user3 = (ToDoUser)context.Data["user"];
+                        // Создаём список через сервис
+                        ToDoList newList = new ToDoList();
+                        newList.Name = name.Name;
+                        newList.Id = name.Id;
+                        newList.User = name.User;
+                        newList.CreateAt = name.CreateAt;
 
-                        await TaskAdd(context, bot, callbackQuery, ct);
+                        await TaskAdd(context, bot, callbackQuery, ct, newList);
                         return ScenarioResult.Completed;
                     }
 
@@ -151,20 +159,17 @@ namespace InteractiveСonsole.Project.TelegramBot.Scenarios
             
         }
 
-        private async Task TaskAdd(ScenarioContext context, ITelegramBotClient bot, CallbackQuery callbackQuery, CancellationToken ct)
+        private async Task TaskAdd(ScenarioContext context, ITelegramBotClient bot, CallbackQuery callbackQuery, CancellationToken ct, ToDoList newList)
         {
-            ToDoList newList1 = new ToDoList();
-            newList1.Name = null;
-            newList1.User = null;
-            newList1.Id = Guid.Empty;
-
             var nameForTask1 = (string)context.Data["TaskName"];
             var dl1 = (DateTime)context.Data["Deadline"];
 
-            var task1 = await _todoService.Add((ToDoUser)context.Data["user"], nameForTask1, dl1, newList1);
-            var registeredUser1 = await _userService.GetUser(callbackQuery.From.Id);
-            await bot.SendMessage(registeredUser1.TelegramUserId, $"Задача \"{task1.Name}\" успешно добавлена без списка с дедлайном {task1.Deadline:dd.MM.yyyy}.", cancellationToken: ct);
-
+            var task = await _todoService.Add((ToDoUser)context.Data["user"], nameForTask1, dl1, newList);
+            var registeredUser = await _userService.GetUser(callbackQuery.From.Id);
+            if (newList == null) 
+                await bot.SendMessage(registeredUser.TelegramUserId, $"Задача \"{task.Name}\" успешно добавлена без списка с дедлайном {task.Deadline:dd.MM.yyyy}.", cancellationToken: ct);
+            else
+                await bot.SendMessage(registeredUser.TelegramUserId, $"Задача \"{task.Name}\" успешно добавлена в список \"{newList.Name}\" с дедлайном {task.Deadline:dd.MM.yyyy}.", cancellationToken: ct);
         }
 
 

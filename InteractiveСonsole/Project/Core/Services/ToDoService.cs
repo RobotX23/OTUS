@@ -118,9 +118,9 @@ namespace InteractiveСonsole
                 return Array.Empty<ToDoItem>();
 
             if (listId == null)
-                return items;
+                return items.Where(i => i.List == null).ToList();
 
-            return items.Where(i => i.List.Id == listId).ToList();
+            return items.Where(i => i.List != null && i.List.Id == listId).ToList();
         }
     }
 }

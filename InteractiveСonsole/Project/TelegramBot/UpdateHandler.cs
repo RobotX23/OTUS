@@ -614,17 +614,8 @@ namespace InteractiveСonsole
 
             if (dto != null && dto.Action == "show")
             {
-                Guid? id = Guid.Empty;
-                if (dto.ToDoListId == null)
-                {
-                    id = Guid.Empty;
-                }
-                else
-                {
-                    id = dto.ToDoListId;
-                }
 
-                    var items = await _toDoService.GetByUserIdAndList(registeredUser.UserId, id, ct) ?? Array.Empty<ToDoItem>();
+                    var items = await _toDoService.GetByUserIdAndList(registeredUser.UserId, dto.ToDoListId, ct) ?? Array.Empty<ToDoItem>();
                 string text = items.Count == 0
                     ? "Список задач пуст!"
                     : "Ваш список задач:\n" + string.Join("\n", items.Select((t, idx) => $"{idx + 1}. {t.Name} - {t.CreateAt} - '{t.Id}'"));
