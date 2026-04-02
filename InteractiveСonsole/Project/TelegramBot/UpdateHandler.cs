@@ -56,7 +56,7 @@ namespace InteractiveСonsole
 
             if (result == ScenarioResult.Completed)
             {
-                if (message.From!.Id == null)
+                if (message == null)
                 {
                     await _scenarioContextRepository.ResetContext(callbackQuery.From!.Id, ct);
                     var registeredUser = await _userService.GetUser(callbackQuery.From.Id);
