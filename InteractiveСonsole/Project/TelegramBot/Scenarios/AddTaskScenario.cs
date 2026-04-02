@@ -94,10 +94,6 @@ namespace InteractiveСonsole.Project.TelegramBot.Scenarios
                         var dto1 = new ToDoListCallbackDto { Action = "show", ToDoListId = l.Id };
                         var callback = dto1.ToString();
 
-                        // Если длина callbackData превышает 64 — используем короткий формат Guid без дефисов
-                        if (callback.Length > 64)
-                            callback = $"{dto1.Action}|{l.Id.ToString("N")}";
-
                         rows.Add(new[] { InlineKeyboardButton.WithCallbackData(l.Name, callback) });
                     }
 
