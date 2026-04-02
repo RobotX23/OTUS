@@ -153,7 +153,6 @@ namespace InteractiveСonsole.Project.TelegramBot.Scenarios
 
         private async Task TaskAdd(ScenarioContext context, ITelegramBotClient bot, CallbackQuery callbackQuery, CancellationToken ct)
         {
-            var user4 = (ToDoUser)context.Data["user"];
             ToDoList newList1 = new ToDoList();
             newList1.Name = null;
             newList1.User = null;
@@ -162,7 +161,7 @@ namespace InteractiveСonsole.Project.TelegramBot.Scenarios
             var nameForTask1 = (string)context.Data["TaskName"];
             var dl1 = (DateTime)context.Data["Deadline"];
 
-            var task1 = await _todoService.Add(user4, nameForTask1, dl1, newList1);
+            var task1 = await _todoService.Add((ToDoUser)context.Data["user"], nameForTask1, dl1, newList1);
             var registeredUser1 = await _userService.GetUser(callbackQuery.From.Id);
             await bot.SendMessage(registeredUser1.TelegramUserId, $"Задача \"{task1.Name}\" успешно добавлена без списка с дедлайном {task1.Deadline:dd.MM.yyyy}.", cancellationToken: ct);
 
