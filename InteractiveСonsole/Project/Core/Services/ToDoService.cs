@@ -47,8 +47,7 @@ namespace InteractiveСonsole
 
             else
             {
-                var newTask = new ToDoItem();
-                newTask.ToDoItemNew(user, name, deadline, list);
+                var newTask = new ToDoItem(user, name, deadline, list);
                 await _toDoRepository.Add(newTask);
                 return newTask;
             }

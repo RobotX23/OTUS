@@ -41,7 +41,7 @@ namespace InteractiveСonsole
 
         public ToDoList? List { get; set; }
 
-        public void ToDoItemNew(ToDoUser user, string name, DateTime deadline, ToDoList? list) 
+        public ToDoItem(ToDoUser user, string name, DateTime deadline, ToDoList? list) 
         {
             Id = Guid.NewGuid();
             User = user;
