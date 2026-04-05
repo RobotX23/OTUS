@@ -9,12 +9,12 @@ namespace InteractiveСonsole
 {
     public interface IToDoService
     {
-        Task<IReadOnlyList<ToDoItem>> GetAllByUserId(Guid userId);
-        Task<IReadOnlyList<ToDoItem>> GetActiveByUserId(Guid userId);
-        Task<ToDoItem> Add(ToDoUser user, string name, DateTime deadline, ToDoList? list);
-        Task MarkCompleted(Guid id);
-        Task Delete (Guid id);
-        Task<IReadOnlyList<ToDoItem>> Find(ToDoUser user, string namePrefix);
+        Task<IReadOnlyList<ToDoItem>> GetAllByUserId(Guid userId, CancellationToken ct = default);
+        Task<IReadOnlyList<ToDoItem>> GetActiveByUserId(Guid userId, CancellationToken ct = default);
+        Task<ToDoItem> Add(ToDoUser user, string name, DateTime deadline, ToDoList? list, CancellationToken ct = default);
+        Task MarkCompleted(Guid id, CancellationToken ct = default);
+        Task Delete (Guid id, CancellationToken ct = default);
+        Task<IReadOnlyList<ToDoItem>> Find(ToDoUser user, string namePrefix, CancellationToken ct = default);
 
         Task<(int maxtasks, int maxline)> LineTasks();
 
@@ -22,7 +22,7 @@ namespace InteractiveСonsole
         /// Устанавливает лимиты на количество и длину задач.
         /// Вызывается один раз при инициализации или при изменении настроек пользователем.
         /// </summary>
-        void SetLimits(int maxTasks, int maxLine);
+        Task SetLimits(int maxTasks, int maxLine, CancellationToken ct = default);
 
         Task<IReadOnlyList<ToDoItem>> GetByUserIdAndList(Guid userId, Guid? listId, CancellationToken ct);
     }

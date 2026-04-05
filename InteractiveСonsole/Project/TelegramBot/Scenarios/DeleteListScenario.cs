@@ -29,7 +29,7 @@ namespace InteractiveСonsole.Project.TelegramBot.Scenarios
             switch (context.CurretStep)
             {
                 case null:
-                    var user = await _userService.GetUser(message.From!.Id);
+                    var user = await _userService.GetUser(message.From!.Id, ct);
                     context.Data["user"] = user;
 
                     var lists = await _toDoListService.GetUserLists(user.UserId, ct) ?? Array.Empty<ToDoList>();
@@ -78,7 +78,7 @@ namespace InteractiveСonsole.Project.TelegramBot.Scenarios
                     // Ожидаем callback; сюда может прийти Message если пользователь ввёл текст — игнорируем
                     var data = callbackQuery.Data ?? string.Empty;
                     var dto = ToDoListCallbackDto.FromString(data);
-                    var registeredUser = await _userService.GetUser(callbackQuery.From.Id);
+                    var registeredUser = await _userService.GetUser(callbackQuery.From.Id, ct);
                     var all = await _toDoListService.GetUserLists(registeredUser.UserId, ct) ?? Array.Empty<ToDoList>();
                     var selected = all.FirstOrDefault(l => l.Id == dto.ToDoListId);
 
@@ -107,7 +107,7 @@ namespace InteractiveСonsole.Project.TelegramBot.Scenarios
                         if (message.Text == "Назад") return ScenarioResult.Completed;
                     if (callbackQuery?.Data == null) return ScenarioResult.Transition;
 
-                    var reg = await _userService.GetUser(callbackQuery.From.Id);
+                    var reg = await _userService.GetUser(callbackQuery.From.Id, ct);
                     var storedCtx = await _scenarioContextRepository.GetContext(reg.TelegramUserId, ct);
                     var storedList = storedCtx?.GetData<ToDoList>("list");
                     if (storedList == null)
@@ -132,7 +132,7 @@ namespace InteractiveСonsole.Project.TelegramBot.Scenarios
                     if (answer == "yes")
                     {
                         var items = await _toDoService.GetByUserIdAndList(reg.UserId, storedList.Id, ct) ?? Array.Empty<ToDoItem>();
-                        foreach (var it in items) await _toDoService.Delete(it.Id);
+                        foreach (var it in items) await _toDoService.Delete(it.Id, ct);
                         var names = await _toDoListService.Get(storedList.Id, ct);
                         await _toDoListService.Delete(storedList.Id, ct);
 
