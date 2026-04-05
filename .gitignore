@@ -361,3 +361,9 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+
+# Qwen Code context file
+QWEN.md
+
+# Qwen Code AI directory
+.qwen/
