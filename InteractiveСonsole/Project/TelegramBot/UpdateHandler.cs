@@ -61,7 +61,7 @@ namespace InteractiveСonsole
                     if (message == null)
                     {
                         await _scenarioContextRepository.ResetContext(callbackQuery.From!.Id, ct);
-                        var registeredUser = await _userService.GetUser(callbackQuery.From.Id);
+                        var registeredUser = await _userService.GetUser(callbackQuery.From.Id, ct);
                         ChangeKeyboard(registeredUser.TelegramUserId, _botClient);
                     }
                     else
@@ -98,7 +98,7 @@ namespace InteractiveСonsole
                 var userId = message?.From?.Id ?? callbackQuery.From!.Id;
                 await _botClient.SendMessage(userId, $"Ошибка ввода: {ex.Message}", cancellationToken: ct);
                 await _scenarioContextRepository.ResetContext(userId, ct);
-                var registeredUser = await _userService.GetUser(userId);
+                var registeredUser = await _userService.GetUser(userId, ct);
                 ChangeKeyboard(registeredUser.TelegramUserId, _botClient);
             }
             catch (TaskLengthLimitException ex)
@@ -107,7 +107,7 @@ namespace InteractiveСonsole
                 var userId = message?.From?.Id ?? callbackQuery.From!.Id;
                 await _botClient.SendMessage(userId, $"Ошибка ввода: {ex.Message}", cancellationToken: ct);
                 await _scenarioContextRepository.ResetContext(userId, ct);
-                var registeredUser = await _userService.GetUser(userId);
+                var registeredUser = await _userService.GetUser(userId, ct);
                 ChangeKeyboard(registeredUser.TelegramUserId, _botClient);
             }
             catch (DublicateTaskException ex)
@@ -116,7 +116,7 @@ namespace InteractiveСonsole
                 var userId = message?.From?.Id ?? callbackQuery.From!.Id;
                 await _botClient.SendMessage(userId, $"Ошибка ввода: {ex.Message}", cancellationToken: ct);
                 await _scenarioContextRepository.ResetContext(userId, ct);
-                var registeredUser = await _userService.GetUser(userId);
+                var registeredUser = await _userService.GetUser(userId, ct);
                 ChangeKeyboard(registeredUser.TelegramUserId, _botClient);
             }
         }
@@ -200,7 +200,7 @@ namespace InteractiveСonsole
                         flag = false;
                         maxtasks = ParseAndValidatelnt(_update.Message.Text, 1, 100);
                         await _botClient.SendMessage(_update.Message.Chat, $"Вы ввели: {maxtasks} количество задач.");
-                        _toDoService.SetLimits(maxtasks, maxline);
+                        await _toDoService.SetLimits(maxtasks, maxline, ct);
                     }
 
                     if (maxline == 0)
@@ -214,7 +214,7 @@ namespace InteractiveСonsole
                         flag = false;
                         maxline = ParseAndValidatelnt(_update.Message.Text, 1, 100);
                         await _botClient.SendMessage(_update.Message.Chat, $"Вы введи: {maxline} длинну задачи.");
-                        _toDoService.SetLimits(maxtasks, maxline);
+                        await _toDoService.SetLimits(maxtasks, maxline, ct);
                         if (name == null)
                         {
                             if (flag == false)
@@ -371,7 +371,7 @@ namespace InteractiveСonsole
                     {
 
                         var toDoReportService = new ToDoReportService(_toDoRepository);
-                        var report = await toDoReportService.GetUserStats(user2.UserId);
+                        var report = await toDoReportService.GetUserStats(user2.UserId, ct);
                         await _botClient.SendMessage(_update.Message.Chat, $"Статистика по задачам на {report.generatedAt}. Всего: {report.total}; Завершено {report.completed}; Активных: {report.active};");
                         return false;
                     }
@@ -388,7 +388,7 @@ namespace InteractiveСonsole
                         partOne.Add(" ");
                         ValidateString(partOne[1]);
                         string task_2 = partOne[1].Trim(); //Используем только вторую часть команды
-                        var taski = await _toDoService.Find(user2, task_2);
+                        var taski = await _toDoService.Find(user2, task_2, ct);
 
                         int i = 1;
                         if (taski != null)
@@ -436,7 +436,7 @@ namespace InteractiveСonsole
                         ValidateString(parts[1]);
                         string number = parts[1].Trim(); //Используем только вторую часть команды
 
-                        var taskess = await _toDoService.GetAllByUserId(user2.UserId);
+                        var taskess = await _toDoService.GetAllByUserId(user2.UserId, ct);
 
 
                         int numberr;
@@ -445,7 +445,7 @@ namespace InteractiveСonsole
                             if (numberr >= 1 && numberr <= taskess.Count)
                             {
                                 var scan_task = taskess[Convert.ToInt32(number) - 1];
-                                await _toDoService.Delete(scan_task.Id); // Вызов переданного метода
+                                await _toDoService.Delete(scan_task.Id, ct); // Вызов переданного метода
                                 await _botClient.SendMessage(_update.Message.Chat, $"Задача - {scan_task.Name} удалена!");
                             }
                             else
@@ -474,7 +474,7 @@ namespace InteractiveСonsole
                         parts.Add(" ");
                         ValidateString(parts[1]);
                         Guid id = Guid.Parse(parts[1].Trim()); //Используем только вторую часть команды
-                        await _toDoService.MarkCompleted(id); // Вызов переданного метода
+                        await _toDoService.MarkCompleted(id, ct); // Вызов переданного метода
                         await _botClient.SendMessage(_update.Message.Chat, $"Задача - {parts[1].Trim()} завершена!");
                         return false;
                     }
