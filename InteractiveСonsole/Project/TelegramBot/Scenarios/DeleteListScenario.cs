@@ -132,7 +132,7 @@ namespace InteractiveСonsole.Project.TelegramBot.Scenarios
                     if (answer == "yes")
                     {
                         var items = await _toDoService.GetByUserIdAndList(reg.UserId, storedList.Id, ct) ?? Array.Empty<ToDoItem>();
-                        foreach (var it in items) await _toDoService.Delete(it.Id, ct);
+                        foreach (var it in items) await _toDoService.Delete(it.Id);
                         var names = await _toDoListService.Get(storedList.Id, ct);
                         await _toDoListService.Delete(storedList.Id, ct);
 

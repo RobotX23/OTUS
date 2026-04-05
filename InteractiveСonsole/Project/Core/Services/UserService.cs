@@ -18,16 +18,16 @@ namespace InteractiveСonsole
         /// <summary>
         /// Поиск существующего пользователя
         /// </summary>
-        public async Task<ToDoUser?> GetUser(long telegramUserId, CancellationToken ct = default)
+        public async Task<ToDoUser?> GetUser(long telegramUserId)
         {
-            return await _userRepository.GetUserByTelegramUserId(telegramUserId, ct);
+            return await _userRepository.GetUserByTelegramUserId(telegramUserId);
         }
         /// <summary>
         /// Регистрация пользователя
         /// </summary>
-        public async Task<ToDoUser> RegisterUser(long telegramUserId, string telegrsmUserName, CancellationToken ct = default)
+        public async Task<ToDoUser> RegisterUser(long telegramUserId, string telegrsmUserName)
         {
-            var existingUser = await _userRepository.GetUserByTelegramUserId(telegramUserId, ct);
+            var existingUser = await _userRepository.GetUserByTelegramUserId(telegramUserId);
             if (existingUser != null)
             {
                 return  existingUser;
@@ -35,9 +35,9 @@ namespace InteractiveСonsole
 
             var user = new ToDoUser();
             user.ToDoUserNew(telegrsmUserName, telegramUserId);
-            await _userRepository.Add(user, ct);
-            return user;
-
+            await _userRepository.Add(user);
+            return await Task.FromResult(user);
+            
         }
     }
 }

@@ -21,18 +21,18 @@ namespace InteractiveСonsole.Project.Infrastructure.DataAccess
             _baseFolder = baseFolder;
             Directory.CreateDirectory(_baseFolder);
         }
-        public async Task Add(ToDoUser user, CancellationToken ct = default)
+        public async Task Add(ToDoUser user)
         {
 
             var filePath = GetFilePath(user.UserId);
-            using (var stream = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.None, 4096, useAsync: true))
+            using (var stream = new FileStream(filePath, FileMode.Create))
             {
-                await JsonSerializer.SerializeAsync(stream, user, cancellationToken: ct);
+                await JsonSerializer.SerializeAsync(stream, user);
             }
 
         }
 
-        public async Task<ToDoUser?> GetUser(Guid userId, CancellationToken ct = default)
+        public async Task<ToDoUser?> GetUser(Guid userId)
         {
             var filePath = GetFilePath(userId);
             if (!File.Exists(filePath))
@@ -40,13 +40,13 @@ namespace InteractiveСonsole.Project.Infrastructure.DataAccess
                 return null;
             }
 
-            using (var stream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, useAsync: true))
+            using (var stream = new FileStream(filePath, FileMode.Open))
             {
-                return await JsonSerializer.DeserializeAsync<ToDoUser?>(stream, cancellationToken: ct);
+                return await JsonSerializer.DeserializeAsync<ToDoUser?>(stream);
             }
         }
 
-        public async Task<ToDoUser?> GetUserByTelegramUserId(long telegramUserId, CancellationToken ct = default)
+        public async Task<ToDoUser?> GetUserByTelegramUserId(long telegramUserId)
         {
             var files = Directory.GetFiles(_baseFolder, "*.json");
 
@@ -54,7 +54,7 @@ namespace InteractiveСonsole.Project.Infrastructure.DataAccess
 
             foreach (var file in files)
             {
-                user = await GetUser(Guid.Parse(Path.GetFileNameWithoutExtension(file)), ct);
+                user = await GetUser(Guid.Parse(Path.GetFileNameWithoutExtension(file)));
 
                 if (user?.TelegramUserId == telegramUserId)
                 {

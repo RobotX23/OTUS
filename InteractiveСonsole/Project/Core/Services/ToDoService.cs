@@ -15,9 +15,8 @@ namespace InteractiveСonsole
             this.maxline = maxline;
         }
 
-        public async Task SetLimits(int maxTasks, int maxLine, CancellationToken ct = default)
+        public void SetLimits(int maxTasks, int maxLine)
         {
-            await Task.CompletedTask;
             maxtasks = maxTasks;
             maxline = maxLine;
         }
@@ -33,9 +32,9 @@ namespace InteractiveСonsole
         /// <summary>
         /// Метод добавление задачи
         /// </summary>
-        public async Task<ToDoItem> Add(ToDoUser user, string name, DateTime deadline, ToDoList? list, CancellationToken ct = default)
+        public async Task<ToDoItem> Add(ToDoUser user, string name, DateTime deadline, ToDoList? list)
         {
-            var task = await _toDoRepository.GetAllByUserId(user.UserId, ct);
+            var task = await _toDoRepository.GetAllByUserId(user.UserId);
 
             if (task.Count > maxtasks - 1)
             {
@@ -47,69 +46,79 @@ namespace InteractiveСonsole
                 throw new TaskLengthLimitException(name.Length, maxline);
             }
 
-            if (await _toDoRepository.ExistsByName(user.UserId, name, ct))
+            if (await _toDoRepository.ExistsByName(user.UserId, name))
             {
                 throw new DublicateTaskException(name);
             }
 
-            var newTask = new ToDoItem(user, name, deadline, list);
-            await _toDoRepository.Add(newTask, ct);
-            return newTask;
+            else
+            {
+                var newTask = new ToDoItem(user, name, deadline, list);
+                await _toDoRepository.Add(newTask);
+                return newTask;
+            }
         }
         /// <summary>
         /// Метод удаления задач
         /// </summary>
-        public async Task Delete(Guid id, CancellationToken ct = default)
+        public async Task Delete(Guid id)
         {
-            await _toDoRepository.Delete(id, ct);
+            await _toDoRepository.Delete(id);
+            
         }
         /// <summary>
         /// Метод вывода активных задач
         /// </summary>
-        public async Task<IReadOnlyList<ToDoItem>> GetActiveByUserId(Guid userId, CancellationToken ct = default)
+        public async Task<IReadOnlyList<ToDoItem>> GetActiveByUserId(Guid userId)
         {
-            var task = await _toDoRepository.GetActiveByUserId(userId, ct);
+            var task = await _toDoRepository.GetActiveByUserId(userId);
             if (task.Count == 0)
             {
                 return null;
             }
-            return task;
+            else
+            {
+                return task;
+            }
         }
         /// <summary>
         /// Метод вывода всех задач
         /// </summary>
-        public async Task<IReadOnlyList<ToDoItem>> GetAllByUserId(Guid userId, CancellationToken ct = default)
+        public async Task<IReadOnlyList<ToDoItem>> GetAllByUserId(Guid userId)
         {
-            var task = await _toDoRepository.GetAllByUserId(userId, ct);
+            var task = await _toDoRepository.GetAllByUserId(userId);
             if (task.Count == 0)
             {
                 return null;
             }
-            return task;
+            else
+            {
+                return task;
+            }
         }
         /// <summary>
         /// Завершение задачи
         /// </summary>
-        public async Task MarkCompleted(Guid id, CancellationToken ct = default)
+        public async Task MarkCompleted(Guid id)
         {
-            var zadacha = await _toDoRepository.Get(id, ct);
+            var zadacha = await _toDoRepository.Get(id);
             if (zadacha != null)
             {
                 zadacha.ChangeState(ToDoItemState.Completed);
-                await _toDoRepository.Update(zadacha, ct);
+                _toDoRepository.Update(zadacha);
             }
         }
         /// <summary>
         /// Вывод задач по части слова
         /// </summary>
-        public async Task<IReadOnlyList<ToDoItem>> Find(ToDoUser user, string namePrefix, CancellationToken ct = default)
+        public async Task<IReadOnlyList<ToDoItem>> Find(ToDoUser user, string namePrefix)
         {
-            return await _toDoRepository.Find(user.UserId, x => x.Name.StartsWith(namePrefix), ct);
+            return await _toDoRepository.Find(user.UserId, x => x.Name.StartsWith(namePrefix));
         }
 
         public async Task<IReadOnlyList<ToDoItem>> GetByUserIdAndList(Guid userId, Guid? listId, CancellationToken ct)
         {
-            var items = await _toDoRepository.GetAllByUserId(userId, ct);
+            var items = await _toDoRepository.GetAllByUserId(userId);
             if (items == null || items.Count == 0)
                 return Array.Empty<ToDoItem>();
 

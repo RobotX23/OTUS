@@ -29,15 +29,15 @@ namespace InteractiveСonsole.Project.Infrastructure.DataAccess
         /// <summary>
         /// Добавление задачи
         /// </summary>
-        public async Task Add(ToDoItem item, CancellationToken ct = default)
+        public async Task Add(ToDoItem item)
         {
-            var filePathUserId = GetFilePathUserId(item.User.UserId, item.Id);
-            using (var stream = new FileStream(filePathUserId, FileMode.Create, FileAccess.Write, FileShare.None, 4096, useAsync: true))
+            var filePathUserId = GetFilePathUserId(item.User.UserId ,item.Id);
+            using (var stream = new FileStream(filePathUserId, FileMode.Create))
             {
-                await JsonSerializer.SerializeAsync(stream, item, cancellationToken: ct);
+                await JsonSerializer.SerializeAsync(stream, item);
             }
 
-            await AddIndex(item.Id, item.User.UserId, ct);
+            AddIndex(item.Id, item.User.UserId);
         }
 
 
@@ -84,17 +84,22 @@ namespace InteractiveСonsole.Project.Infrastructure.DataAccess
         /// <summary>
         /// Добавление связки ключ-значени ToDoItem = UserId
         /// </summary>
-        public async Task AddIndex(Guid key, Guid value, CancellationToken ct = default)
+        public async Task AddIndex(Guid key, Guid value)
         {
 
             var inddex = new Dictionary<Guid, Guid>();
+
 
             var filePathUserId = Index();
 
             if (File.Exists(filePathUserId))
             {
-                string jsonString = await File.ReadAllTextAsync(filePathUserId, ct);
+                // Чтение содержимого файла
+                string jsonString = File.ReadAllText(filePathUserId);
+
+                // Десериализация JSON в Dictionary<Guid, Guid>
                 inddex = JsonSerializer.Deserialize<Dictionary<Guid, Guid>>(jsonString);
+
             }
             else
             {
@@ -104,7 +109,11 @@ namespace InteractiveСonsole.Project.Infrastructure.DataAccess
             inddex[key] = value;
 
             string jsonString1 = JsonSerializer.Serialize(inddex, new JsonSerializerOptions { WriteIndented = true });
-            await File.WriteAllTextAsync(filePathUserId, jsonString1, ct);
+
+            // Запись JSON в файл
+            File.WriteAllText(filePathUserId, jsonString1);
+
+
         }
 
 
@@ -133,9 +142,9 @@ namespace InteractiveСonsole.Project.Infrastructure.DataAccess
         /// <summary>
         /// Количество активных задач пользователя
         /// </summary>
-        public async Task<int> CountActive(Guid userId, CancellationToken ct = default)
+        public async Task<int> CountActive(Guid userId)
         {
-            var actevitem = await GetActiveByUserId(userId, ct);
+            var actevitem = await GetActiveByUserId(userId);
             return actevitem.Count;
         }
 
@@ -143,17 +152,25 @@ namespace InteractiveСonsole.Project.Infrastructure.DataAccess
         /// <summary>
         /// Удаление задачи
         /// </summary>
-        public async Task Delete(Guid id, CancellationToken ct = default)
+        public async Task Delete(Guid id)
         {
+            var inddex = new Dictionary<Guid, Guid>();
+
             var filePathUserId = Index();
 
             if (File.Exists(filePathUserId))
             {
-                string jsonString = await File.ReadAllTextAsync(filePathUserId, ct);
-                var inddex = JsonSerializer.Deserialize<Dictionary<Guid, Guid>>(jsonString);
+                // Чтение содержимого файла
+                string jsonString = File.ReadAllText(filePathUserId);
+
+                // Десериализация JSON в Dictionary<Guid, Guid>
+                inddex = JsonSerializer.Deserialize<Dictionary<Guid, Guid>>(jsonString);
 
                 var userId = inddex[id];
-                string file = $"{_baseFolder}//{userId}//{id}.json";
+                string filePath = _baseFolder;
+                string namefile = $"{id}.json";
+
+                var file = $"{_baseFolder}//{userId}//{namefile}";
 
                 if (file.Length > 0)
                 {
@@ -162,23 +179,35 @@ namespace InteractiveСonsole.Project.Infrastructure.DataAccess
 
                 inddex.Remove(id);
                 string jsonString1 = JsonSerializer.Serialize(inddex, new JsonSerializerOptions { WriteIndented = true });
-                await File.WriteAllTextAsync(filePathUserId, jsonString1, ct);
+                // Запись JSON в файл
+                File.WriteAllText(filePathUserId, jsonString1);
+
+
             }
+
+
         }
         /// <summary>
         /// Проверка на дубликат
         /// </summary>
-        public async Task<bool> ExistsByName(Guid userId, string name, CancellationToken ct = default)
+        public async Task<bool> ExistsByName(Guid userId, string name)
         {
-            var item = await GetAllByUserId(userId, ct);
-            return item.Any(x => x.Name == name && x.User.UserId == userId);
+            var item = await GetAllByUserId(userId);
+            if (item.FirstOrDefault(x => x.Name == name && x.User.UserId == userId) != null)
+            {
+                return await Task.FromResult(true);
+            }
+            else
+            {
+                return await Task.FromResult(false);
+            }
         }
         /// <summary>
         /// Список задач пользователя по условию предиката
         /// </summary>
-        public async Task<IReadOnlyList<ToDoItem>> Find(Guid userId, Func<ToDoItem, bool> predicate, CancellationToken ct = default)
+        public async Task<IReadOnlyList<ToDoItem>> Find(Guid userId, Func<ToDoItem, bool> predicate)
         {
-            var item = await GetAllByUserId(userId, ct);
+            var item = await GetAllByUserId(userId);
             return item.Where(predicate).ToList().AsReadOnly();
         }
 
@@ -186,21 +215,30 @@ namespace InteractiveСonsole.Project.Infrastructure.DataAccess
         /// <summary>
         /// Вывод задачи по id
         /// </summary>
-        public async Task<ToDoItem?> Get(Guid id, CancellationToken ct = default)
+        public async Task<ToDoItem?> Get(Guid id)
         {
+            var inddex = new Dictionary<Guid, Guid>();
+
             var filePathUserId = Index();
 
             if (File.Exists(filePathUserId))
             {
-                string jsonString = await File.ReadAllTextAsync(filePathUserId, ct);
-                var inddex = JsonSerializer.Deserialize<Dictionary<Guid, Guid>>(jsonString);
+                // Чтение содержимого файла
+                string jsonString = File.ReadAllText(filePathUserId);
+
+                // Десериализация JSON в Dictionary<Guid, Guid>
+                inddex = JsonSerializer.Deserialize<Dictionary<Guid, Guid>>(jsonString);
 
                 var userId = inddex[id];
-                var file = $"{_baseFolder}//{userId}//{id}.json";
+                string filePath = _baseFolder;
+                string namefile = $"{id}.json";
 
-                using (var stream = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, useAsync: true))
+                var file = $"{_baseFolder}//{userId}//{namefile}";
+
+
+                using (var stream = new FileStream(file, FileMode.Open))
                 {
-                    return await JsonSerializer.DeserializeAsync<ToDoItem>(stream, cancellationToken: ct);
+                    return await JsonSerializer.DeserializeAsync<ToDoItem>(stream); ;
                 }
             }
             else
@@ -211,24 +249,24 @@ namespace InteractiveСonsole.Project.Infrastructure.DataAccess
         /// <summary>
         /// Вывод активных задач пользователя
         /// </summary>
-        public async Task<IReadOnlyList<ToDoItem>> GetActiveByUserId(Guid userId, CancellationToken ct = default)
+        public async Task<IReadOnlyList<ToDoItem>> GetActiveByUserId(Guid userId)
         {
-            var items = await GetAllByUserId(userId, ct);
+            var items = await GetAllByUserId(userId);
             return items.Where(x => x.State == ToDoItemState.Active).ToList().AsReadOnly();
         }
         /// <summary>
         /// Получить список все задач
         /// </summary>
-        public async Task<IReadOnlyList<ToDoItem>> GetAllByUserId(Guid userId, CancellationToken ct = default)
+        public async Task<IReadOnlyList<ToDoItem>> GetAllByUserId(Guid userId)
         {
             string pathFile = $"{_baseFolder}\\{userId}";
-            Directory.CreateDirectory(pathFile);
+            DirectoryInfo di = Directory.CreateDirectory(pathFile);
             var files = Directory.GetFiles(pathFile, "*.json");
             var items = new List<ToDoItem>();
 
             foreach (var file in files)
             {
-                var item = await Get(Guid.Parse(Path.GetFileNameWithoutExtension(file)), ct);
+                var item = await Get(Guid.Parse(Path.GetFileNameWithoutExtension(file)));
 
                 if (item?.User.UserId == userId)
                 {
@@ -241,12 +279,12 @@ namespace InteractiveСonsole.Project.Infrastructure.DataAccess
         /// <summary>
         /// Изменение задачи
         /// </summary>
-        public async Task Update(ToDoItem item, CancellationToken ct = default)
+        public async Task Update(ToDoItem item)
         {
             var filePathUserId = GetFilePathUserId(item.User.UserId, item.Id);
-            using (var stream = new FileStream(filePathUserId, FileMode.Create, FileAccess.Write, FileShare.None, 4096, useAsync: true))
+            using (var stream = new FileStream(filePathUserId, FileMode.Create))
             {
-                await JsonSerializer.SerializeAsync(stream, item, cancellationToken: ct);
+                await JsonSerializer.SerializeAsync(stream, item);
             }
         }
     }
