@@ -52,19 +52,13 @@ namespace InteractiveСonsole
         {
             var scenario = GetScenario(context.CurrentScenario);
 
-            var result = await scenario.HandleMessageAsync(_botClient, context, message, ct, callbackQuery);
-
-            if (result == ScenarioResult.Completed)
+            try
             {
-                if (message == null)
+                var result = await scenario.HandleMessageAsync(_botClient, context, message, ct, callbackQuery);
+
+                if (result == ScenarioResult.Completed)
                 {
-                    await _scenarioContextRepository.ResetContext(callbackQuery.From!.Id, ct);
-                    var registeredUser = await _userService.GetUser(callbackQuery.From.Id);
-                    ChangeKeyboard(registeredUser.TelegramUserId, _botClient);
-                }
-                else
-                {
-                    if (_update.Message == null)
+                    if (message == null)
                     {
                         await _scenarioContextRepository.ResetContext(callbackQuery.From!.Id, ct);
                         var registeredUser = await _userService.GetUser(callbackQuery.From.Id);
@@ -72,24 +66,59 @@ namespace InteractiveСonsole
                     }
                     else
                     {
-                        await _scenarioContextRepository.ResetContext(message.From!.Id, ct);
-                        ChangeKeyboard(_update.Message.Chat.Id, _botClient);
+                        if (_update.Message == null)
+                        {
+                            await _scenarioContextRepository.ResetContext(callbackQuery.From!.Id, ct);
+                            var registeredUser = await _userService.GetUser(callbackQuery.From.Id);
+                            ChangeKeyboard(registeredUser.TelegramUserId, _botClient);
+                        }
+                        else
+                        {
+                            await _scenarioContextRepository.ResetContext(message.From!.Id, ct);
+                            ChangeKeyboard(_update.Message.Chat.Id, _botClient);
 
+                        }
                     }
-                }
-            }
-            else
-            {
-                if (message == null)
-                {
-                    await _scenarioContextRepository.SetContext(callbackQuery.From!.Id, context, ct);
                 }
                 else
                 {
-                    await _scenarioContextRepository.SetContext(message.From!.Id, context, ct);
+                    if (message == null)
+                    {
+                        await _scenarioContextRepository.SetContext(callbackQuery.From!.Id, context, ct);
+                    }
+                    else
+                    {
+                        await _scenarioContextRepository.SetContext(message.From!.Id, context, ct);
+                    }
                 }
             }
-
+            catch (TaskCountLimitException ex)
+            {
+                await HandleErrorAsync(_botClient, ex, HandleErrorSource.HandleUpdateError, ct);
+                var userId = message?.From?.Id ?? callbackQuery.From!.Id;
+                await _botClient.SendMessage(userId, $"Ошибка ввода: {ex.Message}", cancellationToken: ct);
+                await _scenarioContextRepository.ResetContext(userId, ct);
+                var registeredUser = await _userService.GetUser(userId);
+                ChangeKeyboard(registeredUser.TelegramUserId, _botClient);
+            }
+            catch (TaskLengthLimitException ex)
+            {
+                await HandleErrorAsync(_botClient, ex, HandleErrorSource.HandleUpdateError, ct);
+                var userId = message?.From?.Id ?? callbackQuery.From!.Id;
+                await _botClient.SendMessage(userId, $"Ошибка ввода: {ex.Message}", cancellationToken: ct);
+                await _scenarioContextRepository.ResetContext(userId, ct);
+                var registeredUser = await _userService.GetUser(userId);
+                ChangeKeyboard(registeredUser.TelegramUserId, _botClient);
+            }
+            catch (DublicateTaskException ex)
+            {
+                await HandleErrorAsync(_botClient, ex, HandleErrorSource.HandleUpdateError, ct);
+                var userId = message?.From?.Id ?? callbackQuery.From!.Id;
+                await _botClient.SendMessage(userId, $"Ошибка ввода: {ex.Message}", cancellationToken: ct);
+                await _scenarioContextRepository.ResetContext(userId, ct);
+                var registeredUser = await _userService.GetUser(userId);
+                ChangeKeyboard(registeredUser.TelegramUserId, _botClient);
+            }
         }
 
         bool flag = false;
@@ -171,7 +200,7 @@ namespace InteractiveСonsole
                         flag = false;
                         maxtasks = ParseAndValidatelnt(_update.Message.Text, 1, 100);
                         await _botClient.SendMessage(_update.Message.Chat, $"Вы ввели: {maxtasks} количество задач.");
-                        _toDoService.maxtasks = maxtasks;
+                        _toDoService.SetLimits(maxtasks, maxline);
                     }
 
                     if (maxline == 0)
@@ -185,7 +214,7 @@ namespace InteractiveСonsole
                         flag = false;
                         maxline = ParseAndValidatelnt(_update.Message.Text, 1, 100);
                         await _botClient.SendMessage(_update.Message.Chat, $"Вы введи: {maxline} длинну задачи.");
-                        _toDoService.maxline = maxline;
+                        _toDoService.SetLimits(maxtasks, maxline);
                         if (name == null)
                         {
                             if (flag == false)
@@ -239,20 +268,20 @@ namespace InteractiveСonsole
                 catch (TaskCountLimitException ex)
                 {
                     await HandleErrorAsync(_botClient, ex, HandleErrorSource.HandleUpdateError, ct);
-                    await _botClient.SendMessage(_update.Message.Chat, ex.Message);
+                    await _botClient.SendMessage(_update.Message.Chat, $"Ошибка ввода: {ex.Message}", cancellationToken: ct);
                     break;
 
                 }
                 catch (TaskLengthLimitException ex)
                 {
                     await HandleErrorAsync(_botClient, ex, HandleErrorSource.HandleUpdateError, ct);
-                    await _botClient.SendMessage(_update.Message.Chat, ex.Message);
+                    await _botClient.SendMessage(_update.Message.Chat, $"Ошибка ввода: {ex.Message}", cancellationToken: ct);
                     break;
                 }
                 catch (DublicateTaskException ex)
                 {
                     await HandleErrorAsync(_botClient, ex, HandleErrorSource.HandleUpdateError, ct);
-                    await _botClient.SendMessage(_update.Message.Chat, ex.Message);
+                    await _botClient.SendMessage(_update.Message.Chat, $"Ошибка ввода: {ex.Message}", cancellationToken: ct);
                     break;
                 }
                 catch (FormatException)

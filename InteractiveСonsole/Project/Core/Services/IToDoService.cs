@@ -18,8 +18,12 @@ namespace InteractiveСonsole
 
         Task<(int maxtasks, int maxline)> LineTasks();
 
-        public int maxtasks { get; set; }
-        public int maxline { get; set; }
+        /// <summary>
+        /// Устанавливает лимиты на количество и длину задач.
+        /// Вызывается один раз при инициализации или при изменении настроек пользователем.
+        /// </summary>
+        void SetLimits(int maxTasks, int maxLine);
+
         Task<IReadOnlyList<ToDoItem>> GetByUserIdAndList(Guid userId, Guid? listId, CancellationToken ct);
     }
 }

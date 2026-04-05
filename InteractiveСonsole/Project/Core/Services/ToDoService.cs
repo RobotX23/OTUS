@@ -5,14 +5,20 @@ namespace InteractiveСonsole
     internal class ToDoService : IToDoService
     {
         private readonly  IToDoRepository _toDoRepository;
-        public int maxtasks {  get; set; }
-        public int maxline { get; set; }
+        private int maxtasks;
+        private int maxline;
 
         public ToDoService(IToDoRepository toDoRepository, int maxtasks, int maxline)
         {
             _toDoRepository = toDoRepository;
             this.maxtasks = maxtasks;
             this.maxline = maxline;
+        }
+
+        public void SetLimits(int maxTasks, int maxLine)
+        {
+            maxtasks = maxTasks;
+            maxline = maxLine;
         }
 
 
