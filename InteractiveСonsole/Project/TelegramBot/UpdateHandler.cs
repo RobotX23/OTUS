@@ -311,7 +311,7 @@ namespace InteractiveСonsole
                         partOne.Add(" ");
                         ValidateString(partOne[1]);
                         string task_2 = partOne[1].Trim(); //Используем только вторую часть команды
-                        var taski = await _toDoService.Find(registeredUser, task_2);
+                        var taski = await _toDoService.Find(registeredUser, task_2, ct);
 
                         int i = 1;
                         if (taski != null)
@@ -377,7 +377,7 @@ namespace InteractiveСonsole
                         ValidateString(parts[1]);
                         string number = parts[1].Trim(); //Используем только вторую часть команды
 
-                        var taskess = await _toDoService.GetAllByUserId(registeredUser.UserId);
+                        var taskess = await _toDoService.GetAllByUserId(registeredUser.UserId, ct);
 
 
                         int numberr;
