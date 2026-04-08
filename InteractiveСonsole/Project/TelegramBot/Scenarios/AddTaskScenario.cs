@@ -34,7 +34,7 @@ namespace InteractiveСonsole.Project.TelegramBot.Scenarios
             {
                 case null:
 
-                    var user = await _userService.GetUser(message.From!.Id);
+                    var user = await _userService.GetUser(message.From!.Id, ct);
                     if (user == null)
                     {
                         await bot.SendMessage(message.Chat.Id, "Пользователь не найден!", cancellationToken: ct);
@@ -162,8 +162,8 @@ namespace InteractiveСonsole.Project.TelegramBot.Scenarios
             var nameForTask1 = (string)context.Data["TaskName"];
             var dl1 = (DateTime)context.Data["Deadline"];
 
-            var task = await _todoService.Add((ToDoUser)context.Data["user"], nameForTask1, dl1, newList);
-            var registeredUser = await _userService.GetUser(callbackQuery.From.Id);
+            var task = await _todoService.Add((ToDoUser)context.Data["user"], nameForTask1, dl1, newList, ct);
+            var registeredUser = await _userService.GetUser(callbackQuery.From.Id, ct);
             if (newList == null) 
                 await bot.SendMessage(registeredUser.TelegramUserId, $"Задача \"{task.Name}\" успешно добавлена без списка с дедлайном {task.Deadline:dd.MM.yyyy}.", cancellationToken: ct);
             else

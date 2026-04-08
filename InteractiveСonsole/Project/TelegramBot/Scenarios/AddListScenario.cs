@@ -27,7 +27,7 @@ namespace InteractiveСonsole.Project.TelegramBot.Scenarios
             switch (context.CurretStep)
             {
                 case null:
-                    var user = await _userService.GetUser(message.From!.Id);
+                    var user = await _userService.GetUser(message.From!.Id, ct);
                     context.Data["user"] = user;
                     context.CurretStep = "Name";
                     return ScenarioResult.Transition;
