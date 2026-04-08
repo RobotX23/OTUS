@@ -4,24 +4,16 @@ namespace InteractiveСonsole
 {
     internal class ToDoService : IToDoService
     {
-        private readonly  IToDoRepository _toDoRepository;
-        public int maxtasks {  get; set; }
-        public int maxline { get; set; }
+        private readonly IToDoRepository _toDoRepository;
+        private readonly int _maxTasks;
+        private readonly int _maxLine;
 
-        public ToDoService(IToDoRepository toDoRepository, int maxtasks, int maxline)
+        public ToDoService(IToDoRepository toDoRepository, int maxTasks, int maxLine)
         {
             _toDoRepository = toDoRepository;
-            this.maxtasks = maxtasks;
-            this.maxline = maxline;
+            _maxTasks = maxTasks;
+            _maxLine = maxLine;
         }
-
-
-        public async Task<(int, int)> LineTasks()
-        {
-            return await Task.FromResult( (maxtasks, maxline));
-        }
-
-
 
         /// <summary>
         /// Метод добавление задачи
@@ -30,14 +22,14 @@ namespace InteractiveСonsole
         {
             var task = await _toDoRepository.GetAllByUserId(user.UserId);
 
-            if (task.Count > maxtasks - 1)
+            if (task.Count > _maxTasks - 1)
             {
-                throw new TaskCountLimitException(maxtasks);
+                throw new TaskCountLimitException(_maxTasks);
             }
 
-            if (name.Length > maxline)
+            if (name.Length > _maxLine)
             {
-                throw new TaskLengthLimitException(name.Length, maxline);
+                throw new TaskLengthLimitException(name.Length, _maxLine);
             }
 
             if (await _toDoRepository.ExistsByName(user.UserId, name))

@@ -92,7 +92,6 @@ namespace InteractiveСonsole
 
         }
 
-        bool flag = false;
         public async Task HandleUpdateAsync(ITelegramBotClient botClient, Update update, CancellationToken ct)
         {
             _update = update;
@@ -139,160 +138,56 @@ namespace InteractiveСonsole
 
         private async Task OnMessage(Update update, Message message, CancellationToken ct)
         {
-
-            // Дальше обычные сообщения
             if (update.Message == null)
                 return;
 
-            string? textEdit = _update.Message.Text;
-
-            if (update.Message == null)
-                return;
-
-
-
-
-            while (true)
+            try
             {
-
-                try
+                var commands = new[]
                 {
-                    var taskline = await _toDoService.LineTasks();
-                    int maxtasks = taskline.Item1;
-                    int maxline = taskline.Item2;
-                    if (maxtasks == 0)
-                    {
-                        if (flag == false)
-                        {
-                            await _botClient.SendMessage(_update.Message.Chat, "Введите максимальное допустимое количество задач: ");
-                            flag = true;
-                            break;
-                        }
-                        flag = false;
-                        maxtasks = ParseAndValidatelnt(_update.Message.Text, 1, 100);
-                        await _botClient.SendMessage(_update.Message.Chat, $"Вы ввели: {maxtasks} количество задач.");
-                        _toDoService.maxtasks = maxtasks;
-                    }
+                    new BotCommand{ Command = "start", Description = "Авторизация"},
+                    new BotCommand{ Command = "help", Description = "Помощь"},
+                    new BotCommand{ Command = "info", Description = "Информация о релизе"},
+                    new BotCommand{ Command = "exit", Description = "Выход из сессии"},
+                    new BotCommand{ Command = "addtask", Description = "Добавить задачу"},
+                    new BotCommand{ Command = "show", Description = "Вывести задачи"},
+                    new BotCommand{ Command = "remowetask", Description = "Удалить задачу"},
+                    new BotCommand{ Command = "completetask", Description = "Закрыть задачу"},
+                    new BotCommand{ Command = "find", Description = "Поиск задачи по слову"},
+                    new BotCommand{ Command = "report", Description = "Отчет статистики"},
+                    new BotCommand{ Command = "cansel", Description = "выход из цикла добавления задачи"}
+                };
+                await _botClient.SetMyCommands(commands);
 
-                    if (maxline == 0)
-                    {
-                        if (flag == false)
-                        {
-                            await _botClient.SendMessage(_update.Message.Chat, "Введите максимальную длинну задач: ");
-                            flag = true;
-                            break;
-                        }
-                        flag = false;
-                        maxline = ParseAndValidatelnt(_update.Message.Text, 1, 100);
-                        await _botClient.SendMessage(_update.Message.Chat, $"Вы введи: {maxline} длинну задачи.");
-                        _toDoService.maxline = maxline;
-                        if (name == null)
-                        {
-                            if (flag == false)
-                            {
-                                SendMainMenu(_update.Message.Chat.Id, _botClient);
-                                flag = true;
-                                break;
-                            }
-                            flag = false;
-
-                        }
-                    }
-
-                    var commands = new[]
-{
-                                new BotCommand{ Command = "start", Description = "Авторизация"},
-                                new BotCommand{ Command = "help", Description = "Помощь"},
-                                new BotCommand{ Command = "info", Description = "Информация о релизе"},
-                                new BotCommand{ Command = "exit", Description = "Выход из сессии"},
-                                new BotCommand{ Command = "addtask", Description = "Добавить задачу"},
-                                new BotCommand{ Command = "show", Description = "Вывести задачи"},
-                                new BotCommand{ Command = "remowetask", Description = "Удалить задачу"},
-                                new BotCommand{ Command = "completetask", Description = "Закрыть задачу"},
-                                new BotCommand{ Command = "find", Description = "Поиск задачи по слову"},
-                                new BotCommand{ Command = "report", Description = "Отчет статистики"},
-                                new BotCommand{ Command = "cansel", Description = "выход из цикла добавления задачи"}
-
-                            };
-                    await _botClient.SetMyCommands(commands);
-
-
-
-
-
-                    string? text = _update.Message.Text;
-                    if (await Returne(text, ct))
-                    {
-                        name = null;
-                        user2 = null;
-                        break;
-                    }
-                    else
-                    {
-                        break;
-                    }
-
-
-
-
-                }
-                catch (TaskCountLimitException ex)
-                {
-                    await HandleErrorAsync(_botClient, ex, HandleErrorSource.HandleUpdateError, ct);
-                    await _botClient.SendMessage(_update.Message.Chat, ex.Message);
-                    break;
-
-                }
-                catch (TaskLengthLimitException ex)
-                {
-                    await HandleErrorAsync(_botClient, ex, HandleErrorSource.HandleUpdateError, ct);
-                    await _botClient.SendMessage(_update.Message.Chat, ex.Message);
-                    break;
-                }
-                catch (DublicateTaskException ex)
-                {
-                    await HandleErrorAsync(_botClient, ex, HandleErrorSource.HandleUpdateError, ct);
-                    await _botClient.SendMessage(_update.Message.Chat, ex.Message);
-                    break;
-                }
-                catch (FormatException)
-                {
-                    Exception myEx = new Exception("Ошибка: вы ввели не корректное число.");
-                    await HandleErrorAsync(_botClient, myEx, HandleErrorSource.HandleUpdateError, ct);
-                    await _botClient.SendMessage(_update.Message.Chat, "Ошибка: вы ввели не корректное число.");
-                    flag = true;
-                    break;
-                }
-                catch (ArgumentException ex)
-                {
-                    await HandleErrorAsync(_botClient, ex, HandleErrorSource.HandleUpdateError, ct);
-                    await _botClient.SendMessage(_update.Message.Chat, ex.Message);
-                    break;
-                }
-
+                string? text = _update.Message.Text;
+                await Returne(text, ct);
             }
-
+            catch (TaskCountLimitException ex)
+            {
+                await HandleErrorAsync(_botClient, ex, HandleErrorSource.HandleUpdateError, ct);
+                await _botClient.SendMessage(_update.Message.Chat, ex.Message);
+            }
+            catch (TaskLengthLimitException ex)
+            {
+                await HandleErrorAsync(_botClient, ex, HandleErrorSource.HandleUpdateError, ct);
+                await _botClient.SendMessage(_update.Message.Chat, ex.Message);
+            }
+            catch (DublicateTaskException ex)
+            {
+                await HandleErrorAsync(_botClient, ex, HandleErrorSource.HandleUpdateError, ct);
+                await _botClient.SendMessage(_update.Message.Chat, ex.Message);
+            }
+            catch (ArgumentException ex)
+            {
+                await HandleErrorAsync(_botClient, ex, HandleErrorSource.HandleUpdateError, ct);
+                await _botClient.SendMessage(_update.Message.Chat, ex.Message);
+            }
         }
 
 
 
 
 
-
-
-        int ParseAndValidatelnt(string? str, int min, int max)
-        {
-            if (!int.TryParse(str, out int result))
-            {
-                throw new FormatException("Ошибка: вы ввели некорректное число.");
-            }
-
-            if (result < min || result > max)
-            {
-                throw new ArgumentException("Количество задач должно быть от 1 до 100.");
-            }
-            return result;
-        }
 
 
         /// <summary>
@@ -323,43 +218,71 @@ namespace InteractiveСonsole
 
                     return false;
                 case "/help": //Обработка команды help
-                    await NameVerification(Help, name, ct);
-                    return false;
-                case "/info": //Обработка команды info
-                    await NameVerification(Info, name, ct);
-                    return false;
-                case "/exit":
-                    SendMainMenuExit(_update.Message.Chat.Id, _botClient);
-                    return true; //Обработка команды exid
-                case "/report":
-                case "Отчет":
-                    if (string.IsNullOrWhiteSpace(name))
                     {
-                        await _botClient.SendMessage(_update.Message.Chat, "Команда не распознана");
+                        var registeredUser = await _userService.GetUser(_update.Message.From!.Id);
+                        if (registeredUser == null)
+                        {
+                            await _botClient.SendMessage(_update.Message.Chat, "Требуется авторизация. Используйте /start");
+                            return false;
+                        }
+                        user2 = registeredUser;
+                        await NameVerification(Help, registeredUser.TelegramUserName, ct);
                         return false;
                     }
-                    else
+                case "/info": //Обработка команды info
                     {
-
+                        var registeredUser = await _userService.GetUser(_update.Message.From!.Id);
+                        if (registeredUser == null)
+                        {
+                            await _botClient.SendMessage(_update.Message.Chat, "Требуется авторизация. Используйте /start");
+                            return false;
+                        }
+                        user2 = registeredUser;
+                        await NameVerification(Info, registeredUser.TelegramUserName, ct);
+                        return false;
+                    }
+                case "/exit":
+                    {
+                        var registeredUser = await _userService.GetUser(_update.Message.From!.Id);
+                        if (registeredUser == null)
+                        {
+                            await _botClient.SendMessage(_update.Message.Chat, "Требуется авторизация. Используйте /start");
+                            return false;
+                        }
+                        user2 = registeredUser;
+                        SendMainMenuExit(_update.Message.Chat.Id, _botClient);
+                        return true;
+                    }
+                case "/report":
+                case "Отчет":
+                    {
+                        var registeredUser = await _userService.GetUser(_update.Message.From!.Id);
+                        if (registeredUser == null)
+                        {
+                            await _botClient.SendMessage(_update.Message.Chat, "Требуется авторизация. Используйте /start");
+                            return false;
+                        }
+                        user2 = registeredUser;
                         var toDoReportService = new ToDoReportService(_toDoRepository);
-                        var report = await toDoReportService.GetUserStats(user2.UserId);
+                        var report = await toDoReportService.GetUserStats(registeredUser.UserId);
                         await _botClient.SendMessage(_update.Message.Chat, $"Статистика по задачам на {report.generatedAt}. Всего: {report.total}; Завершено {report.completed}; Активных: {report.active};");
                         return false;
                     }
                 case string command when command.StartsWith("/find"):
-                    if (string.IsNullOrWhiteSpace(name))
                     {
-                        await _botClient.SendMessage(_update.Message.Chat, "Команда не распознана");
-                        return false;
-                    }
-                    else
-                    {
+                        var registeredUser = await _userService.GetUser(_update.Message.From!.Id);
+                        if (registeredUser == null)
+                        {
+                            await _botClient.SendMessage(_update.Message.Chat, "Требуется авторизация. Используйте /start");
+                            return false;
+                        }
+
                         List<string> partOne = new List<string>();
                         partOne.AddRange(command.Split(' ', 2)); //Разделение строки по пробелу после команды
                         partOne.Add(" ");
                         ValidateString(partOne[1]);
                         string task_2 = partOne[1].Trim(); //Используем только вторую часть команды
-                        var taski = await _toDoService.Find(user2, task_2);
+                        var taski = await _toDoService.Find(registeredUser, task_2);
 
                         int i = 1;
                         if (taski != null)
@@ -380,34 +303,52 @@ namespace InteractiveСonsole
 
                 case "/addtask":
                 case "Добавить задачу":
-
-                    var newContext = new ScenarioContext(ScenarioType.AddTask);
-
-                    await _scenarioContextRepository.SetContext(_update.Message.From!.Id, newContext, ct);
-
-                    await ProcessScenario(newContext, _update.Message, ct, _update.CallbackQuery);
-                    var scenari = newContext.CurrentScenario;
-                    ChangeKeyboardExid(_update.Message.Chat.Id, _botClient, scenari);
-                    return false;
-                case "/show":
-                case "Задачи":
-                    await HandleShowCommandAsync(ct);
-                    return false;
-                case string command when command.StartsWith("/remowetask"):
-                    if (string.IsNullOrWhiteSpace(name))
                     {
-                        await _botClient.SendMessage(_update.Message.Chat, "Команда не распознана");
+                        var registeredUser = await _userService.GetUser(_update.Message.From!.Id);
+                        if (registeredUser == null)
+                        {
+                            await _botClient.SendMessage(_update.Message.Chat, "Требуется авторизация. Используйте /start");
+                            return false;
+                        }
+                        user2 = registeredUser;
+                        var newContext = new ScenarioContext(ScenarioType.AddTask);
+
+                        await _scenarioContextRepository.SetContext(_update.Message.From!.Id, newContext, ct);
+
+                        await ProcessScenario(newContext, _update.Message, ct, _update.CallbackQuery);
+                        var scenari = newContext.CurrentScenario;
+                        ChangeKeyboardExid(_update.Message.Chat.Id, _botClient, scenari);
                         return false;
                     }
-                    else
+                case "/show":
+                case "Задачи":
                     {
+                        var registeredUser = await _userService.GetUser(_update.Message.From!.Id);
+                        if (registeredUser == null)
+                        {
+                            await _botClient.SendMessage(_update.Message.Chat, "Требуется авторизация. Используйте /start");
+                            return false;
+                        }
+                        user2 = registeredUser;
+                        await HandleShowCommandAsync(ct);
+                        return false;
+                    }
+                case string command when command.StartsWith("/remowetask"):
+                    {
+                        var registeredUser = await _userService.GetUser(_update.Message.From!.Id);
+                        if (registeredUser == null)
+                        {
+                            await _botClient.SendMessage(_update.Message.Chat, "Требуется авторизация. Используйте /start");
+                            return false;
+                        }
+                        user2 = registeredUser;
                         List<string> parts = new List<string>();
                         parts.AddRange(command.Split(' ', 2)); //Разделение строки по пробелу после команды
                         parts.Add(" ");
                         ValidateString(parts[1]);
                         string number = parts[1].Trim(); //Используем только вторую часть команды
 
-                        var taskess = await _toDoService.GetAllByUserId(user2.UserId);
+                        var taskess = await _toDoService.GetAllByUserId(registeredUser.UserId);
 
 
                         int numberr;
@@ -433,13 +374,14 @@ namespace InteractiveСonsole
                     }
 
                 case string command when command.StartsWith("/completetask"):
-                    if (string.IsNullOrWhiteSpace(name))
                     {
-                        await _botClient.SendMessage(_update.Message.Chat, "Команда не распознана");
-                        return false;
-                    }
-                    else
-                    {
+                        var registeredUser = await _userService.GetUser(_update.Message.From!.Id);
+                        if (registeredUser == null)
+                        {
+                            await _botClient.SendMessage(_update.Message.Chat, "Требуется авторизация. Используйте /start");
+                            return false;
+                        }
+                        user2 = registeredUser;
                         List<string> parts = new List<string>();
                         parts.AddRange(command.Split(' ', 2)); //Разделение строки по пробелу после команды
                         parts.Add(" ");

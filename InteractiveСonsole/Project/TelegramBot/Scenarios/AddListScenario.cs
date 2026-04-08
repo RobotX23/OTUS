@@ -36,8 +36,7 @@ namespace InteractiveСonsole.Project.TelegramBot.Scenarios
                     if (message.Text == "Назад")
                         return ScenarioResult.Completed;
                     ValidateName(message.Text);
-                    var dict = (Dictionary<string, object>)context.Data!;
-                    if (!dict.TryGetValue("user", out var userObj) || userObj is not ToDoUser toDoUser)
+                    if (!context.Data.TryGetValue("user", out var userObj) || userObj is not ToDoUser toDoUser)
                         throw new InvalidOperationException("Пользовотель отсутствует");
                     await _toDoListService.Add(toDoUser, message.Text!.Trim(), ct);
                     await botClient.SendMessage(message.Chat.Id, "Список создан.", cancellationToken: ct);
