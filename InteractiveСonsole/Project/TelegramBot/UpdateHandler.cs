@@ -492,7 +492,6 @@ namespace InteractiveСonsole
             if (registeredUser == null) { await AnswerIfNeeded(); return; }
 
             var data = callback.Data ?? string.Empty;
-            Console.WriteLine($"[DEBUG] Callback: '{data}'");
 
             // 🔹 1. Обработка кнопки "Назад к спискам"
             if (data == "back|lists")
@@ -569,16 +568,19 @@ namespace InteractiveСonsole
             {
                 var items = await _toDoService.GetByUserIdAndList(registeredUser.UserId, listDto.ToDoListId, ct) ?? Array.Empty<ToDoItem>();
 
+                var itemsActev = items.Where(x => x.State == ToDoItemState.Active);
+
+
                 // Формируем кнопки задач
                 var taskButtons = new List<KeyValuePair<string, string>>();
-                foreach (var item in items)
+                foreach (var item in itemsActev)
                 {
                     var taskDto = new ToDoItemCallbackDto { Action = "showtask", ToDoItemId = item.Id };
                     var cb = SafeCallback(taskDto.Action, item.Id);
                     taskButtons.Add(new KeyValuePair<string, string>(item.Name, cb));
                 }
 
-                string text = items.Count == 0
+                string text = itemsActev.Count() == 0
                     ? "📭 Список пуст!"
                     : $"📋 Задачи (стр. {listDto.Page + 1}):";
 
@@ -603,6 +605,52 @@ namespace InteractiveСonsole
                 await AnswerIfNeeded();
                 return;
             }
+
+            if (listDto.Action == "show_completed")
+            {
+                var items = await _toDoService.GetByUserIdAndList(registeredUser.UserId, listDto.ToDoListId, ct) ?? Array.Empty<ToDoItem>();
+
+                var itemsActev = items.Where(x => x.State == ToDoItemState.Completed);
+
+
+                // Формируем кнопки задач
+                var taskButtons = new List<KeyValuePair<string, string>>();
+                foreach (var item in itemsActev)
+                {
+                    var taskDto = new ToDoItemCallbackDto { Action = "showtask", ToDoItemId = item.Id };
+                    var cb = SafeCallback(taskDto.Action, item.Id);
+                    taskButtons.Add(new KeyValuePair<string, string>(item.Name, cb));
+                }
+
+                string text = itemsActev.Count() == 0
+                    ? "📭 Список пуст!"
+                    : $"✅ Выполненные (стр. {listDto.Page + 1}):";
+
+                var markup = BuildPagedButtons(taskButtons.AsReadOnly(), listDto);
+
+                if (callback.Message != null)
+                    await _botClient.EditMessageText(
+                        callback.Message.Chat.Id,
+                        callback.Message.MessageId,
+                        text,
+                        replyMarkup: markup,
+                        parseMode: ParseMode.Markdown,
+                        cancellationToken: ct);
+                else
+                    await _botClient.SendMessage(
+                        registeredUser.TelegramUserId,
+                        text,
+                        replyMarkup: markup,
+                        parseMode: ParseMode.Markdown,
+                        cancellationToken: ct);
+
+                await AnswerIfNeeded();
+                return;
+            }
+
+
+
+
 
             // 🔹 4. Обработка addlist / deletelist
             if (data == "addlist")
@@ -687,10 +735,10 @@ namespace InteractiveСonsole
             return full.Length <= 64 ? full : $"{action}|{id.ToString("N")}";
         }
 
-        // Метод для построения пагинированной клавиатуры задач
         private InlineKeyboardMarkup BuildPagedButtons(
             IReadOnlyList<KeyValuePair<string, string>> taskButtons,
-            PagedListCallbackDto listDto)
+            PagedListCallbackDto listDto,
+            bool showCompletedButton = true) // ← новый параметр
         {
             int totalPages = taskButtons.Count == 0 ? 1 : (int)Math.Ceiling(taskButtons.Count / (double)_pageSize);
             var pageItems = taskButtons.GetBatchByNumber(_pageSize, listDto.Page).ToList();
@@ -701,11 +749,25 @@ namespace InteractiveСonsole
             foreach (var item in pageItems)
                 rows.Add(new[] { InlineKeyboardButton.WithCallbackData(item.Key, item.Value) });
 
-            // Навигация: Назад к спискам + стрелки страниц
+            // Навигация
             var navRow = new List<InlineKeyboardButton>();
 
             // Кнопка "◀️ К спискам"
             navRow.Add(InlineKeyboardButton.WithCallbackData("◀️ К спискам", "back|lists"));
+
+            // ✅ Кнопка "☑️ Выполненные" (только для активных задач)
+            if (showCompletedButton && listDto.Action == "show")
+            {
+                var completedDto = new PagedListCallbackDto("show_completed", listDto.ToDoListId, 0);
+                navRow.Add(InlineKeyboardButton.WithCallbackData("☑️ Выполненные", completedDto.ToString()));
+            }
+
+            // ✅ Кнопка "📋 Активные" (только для выполненных задач)
+            if (showCompletedButton && listDto.Action == "show_completed")
+            {
+                var activeDto = new PagedListCallbackDto("show", listDto.ToDoListId, 0);
+                navRow.Add(InlineKeyboardButton.WithCallbackData("📋 Активные", activeDto.ToString()));
+            }
 
             // Стрелки пагинации
             if (listDto.Page > 0)
