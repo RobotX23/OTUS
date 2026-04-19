@@ -1,4 +1,5 @@
 ﻿using InteractiveСonsole.Project.Core.Exceptions;
+using InteractiveСonsole.Project.Core.Helpers;
 using InteractiveСonsole.Project.Core.Services;
 using InteractiveСonsole.Project.TelegramBot.Dto;
 using InteractiveСonsole.Project.TelegramBot.Scenarios;
@@ -13,6 +14,7 @@ namespace InteractiveСonsole
 {
     internal class UpdateHandler : IUpdateHandler
     {
+        private static int _pageSize = 5;
         private string? name = null;
         private ToDoUser? user2;
         private Update _update;
@@ -449,42 +451,31 @@ namespace InteractiveСonsole
         }
 
 
-        // Вызывается при получении команды /show или текста "Активные задачи"
         private async Task<bool> HandleShowCommandAsync(CancellationToken ct)
         {
-            // Получаем списки пользователя 
             var lists = await _toDoListService.GetUserLists(user2.UserId, ct) ?? Array.Empty<ToDoList>();
-
-            // Список рядов кнопок для InlineKeyboardMarkup
             var rows = new List<IEnumerable<InlineKeyboardButton>>();
 
-            // Кнопка "📌Без списка" — Action = "show", ToDoListId = null
             var noListDto = new ToDoListCallbackDto { Action = "show", ToDoListId = null };
             rows.Add(new[] { InlineKeyboardButton.WithCallbackData("📌Без списка", noListDto.ToString()) });
 
-            // Кнопки для каждого списка пользователя — Action = "show", ToDoListId = list.Id
             foreach (var l in lists)
             {
                 var dto = new ToDoListCallbackDto { Action = "show", ToDoListId = l.Id };
-                var callback = dto.ToString();
-
-                // Если длина callbackData превышает 64 — используем короткий формат Guid без дефисов
-                if (callback.Length > 64)
-                    callback = $"{dto.Action}|{l.Id.ToString("N")}";
-
-                rows.Add(new[] { InlineKeyboardButton.WithCallbackData(l.Name, callback) });
+                var cb = dto.ToString();
+                if (cb.Length > 64) cb = $"show|{l.Id.ToString("N")}";
+                rows.Add(new[] { InlineKeyboardButton.WithCallbackData(l.Name, cb) });
             }
 
-            // Кнопки действий: добавить список и удалить список
             rows.Add(new[] { InlineKeyboardButton.WithCallbackData("🆕Добавить", "addlist") });
             rows.Add(new[] { InlineKeyboardButton.WithCallbackData("❌Удалить", "deletelist") });
 
             var markup = new InlineKeyboardMarkup(rows);
 
-            // Отправляем сообщение с клавиатурой
+            // ✅ Для текстовой команды используем _update.Message (оно не null)
             await _botClient.SendMessage(_update.Message.Chat.Id, "Выберите список", replyMarkup: markup, cancellationToken: ct);
 
-            return false; // не завершает сценарий
+            return false;
         }
 
         private async Task OnCallbackQuery(Update update, CallbackQuery callback, CancellationToken ct)
@@ -495,71 +486,28 @@ namespace InteractiveСonsole
                     await _botClient.AnswerCallbackQuery(callback.Id, cancellationToken: ct);
             }
 
-            if (callback.From == null)
-            {
-                await AnswerIfNeeded();
-                return;
-            }
+            if (callback.From == null) { await AnswerIfNeeded(); return; }
 
             var registeredUser = await _userService.GetUser(callback.From.Id, ct);
-            if (registeredUser == null)
-            {
-                await AnswerIfNeeded();
-                return;
-            }
+            if (registeredUser == null) { await AnswerIfNeeded(); return; }
 
             var data = callback.Data ?? string.Empty;
+            Console.WriteLine($"[DEBUG] Callback: '{data}'");
 
-
-
-            // 🔹 1. Обработка действий с ЗАДАЧАМИ (showtask, completetask, deletetask)
-            var itemDto = ToDoItemCallbackDto.FromString(data);
-
-            // 🔹 Обработка кнопки "Назад"
-            if (itemDto.Action == "back")
+            // 🔹 1. Обработка кнопки "Назад к спискам"
+            if (data == "back|lists")
             {
                 await AnswerIfNeeded();
-
-                // Возвращаемся к списку задач (показываем все списки пользователя)
-                var lists = await _toDoListService.GetUserLists(registeredUser.UserId, ct) ?? Array.Empty<ToDoList>();
-
-                var rows = new List<IEnumerable<InlineKeyboardButton>>();
-
-                // Кнопка "📌Без списка"
-                var noListDto = new ToDoListCallbackDto { Action = "show", ToDoListId = null };
-                rows.Add(new[] { InlineKeyboardButton.WithCallbackData("📌Без списка", noListDto.ToString()) });
-
-                // Кнопки списков
-                foreach (var l in lists)
-                {
-                    var dto = new ToDoListCallbackDto { Action = "show", ToDoListId = l.Id };
-                    var cb = dto.ToString();
-                    if (cb.Length > 64) cb = $"{dto.Action}|{l.Id.ToString("N")}";
-                    rows.Add(new[] { InlineKeyboardButton.WithCallbackData(l.Name, cb) });
-                }
-
-                rows.Add(new[] { InlineKeyboardButton.WithCallbackData("🆕Добавить", "addlist") });
-                rows.Add(new[] { InlineKeyboardButton.WithCallbackData("❌Удалить", "deletelist") });
-
-                var markup = new InlineKeyboardMarkup(rows);
-
-                if (callback.Message != null)
-                    await _botClient.EditMessageText(callback.Message.Chat.Id, callback.Message.MessageId, "Выберите список", replyMarkup: markup, cancellationToken: ct);
-                else
-                    await _botClient.SendMessage(registeredUser.TelegramUserId, "Выберите список", replyMarkup: markup, cancellationToken: ct);
-
+                await ShowListsMenuAsync(registeredUser, callback, ct);
                 return;
             }
 
-
-
+            // 🔹 2. Обработка действий с ЗАДАЧАМИ (showtask, completetask, deletetask)
+            var itemDto = ToDoItemCallbackDto.FromString(data);
             if (!string.IsNullOrEmpty(itemDto.Action) && itemDto.ToDoItemId.HasValue)
             {
-
-
-
                 var task = await _toDoService.Get(itemDto.ToDoItemId.Value, ct);
-                // ✅ showtask: показать задачу с кнопками действий
+
                 if (itemDto.Action == "showtask")
                 {
                     if (task == null || task.User?.UserId != registeredUser.UserId)
@@ -568,95 +516,95 @@ namespace InteractiveСonsole
                         await _botClient.SendMessage(registeredUser.TelegramUserId, "❌ Задача не найдена", cancellationToken: ct);
                         return;
                     }
-
                     string status = task.State == ToDoItemState.Completed ? "✅ Выполнена" : "⏳ Активна";
                     string text = $"📋 *{task.Name}*\n🆔 `{task.Id}`\n📅 {task.CreateAt:dd.MM.yyyy}\n🔄 {status}";
 
                     var rows = new List<IEnumerable<InlineKeyboardButton>>();
-
-                    // Кнопка "✅ Выполнить" (только для активных задач)
                     if (task.State == ToDoItemState.Active)
                     {
-                        var completeDto = new ToDoItemCallbackDto { Action = "completetask", ToDoItemId = task.Id };
-                        var cb = SafeCallback(completeDto.ToString(), completeDto.Action, task.Id);
+                        var cb = SafeCallback("completetask", task.Id);
                         rows.Add(new[] { InlineKeyboardButton.WithCallbackData("✅ Выполнить", cb) });
                     }
-
-                    // Кнопка "❌ Удалить"
-                    var deleteDto = new ToDoItemCallbackDto { Action = "deletetask", ToDoItemId = task.Id };
-                    var cbDel = SafeCallback(deleteDto.ToString(), deleteDto.Action, task.Id);
+                    var cbDel = SafeCallback("deletetask", task.Id);
                     rows.Add(new[] { InlineKeyboardButton.WithCallbackData("❌ Удалить", cbDel) });
-
-                    // Кнопка "◀️ Назад"
-                    var backDto = new ToDoItemCallbackDto { Action = "back" };
-                    rows.Add(new[] { InlineKeyboardButton.WithCallbackData("◀️ Назад", backDto.ToString()) });
+                    rows.Add(new[] { InlineKeyboardButton.WithCallbackData("◀️ Назад", "back|lists") });
 
                     var markup = new InlineKeyboardMarkup(rows);
                     if (callback.Message != null)
                         await _botClient.EditMessageText(callback.Message.Chat.Id, callback.Message.MessageId, text, replyMarkup: markup, parseMode: ParseMode.Markdown, cancellationToken: ct);
                     else
                         await _botClient.SendMessage(registeredUser.TelegramUserId, text, replyMarkup: markup, parseMode: ParseMode.Markdown, cancellationToken: ct);
-
                     await AnswerIfNeeded();
                     return;
                 }
 
-                // ✅ completetask: завершить задачу
                 if (itemDto.Action == "completetask")
                 {
                     await _toDoService.MarkCompleted(itemDto.ToDoItemId.Value, ct);
-                    if (callback.Message != null)
-                        await _botClient.EditMessageText(callback.Message.Chat.Id, callback.Message.MessageId, $"✅ *{task.Name}* завершена!", parseMode: ParseMode.Markdown, cancellationToken: ct);
-                    else
-                        await _botClient.SendMessage(registeredUser.TelegramUserId, $"✅ *{task.Name}* завершена!", parseMode: ParseMode.Markdown, cancellationToken: ct);
                     await AnswerIfNeeded();
+                    string msg = $"✅ *{task.Name}* завершена!";
+                    if (callback.Message != null)
+                        await _botClient.EditMessageText(callback.Message.Chat.Id, callback.Message.MessageId, msg, parseMode: ParseMode.Markdown, cancellationToken: ct);
+                    else
+                        await _botClient.SendMessage(registeredUser.TelegramUserId, msg, parseMode: ParseMode.Markdown, cancellationToken: ct);
                     return;
                 }
 
-                // ✅ deletetask: удалить задачу
                 if (itemDto.Action == "deletetask")
                 {
                     await _toDoService.Delete(itemDto.ToDoItemId.Value, ct);
-                    if (callback.Message != null)
-                        await _botClient.EditMessageText(callback.Message.Chat.Id, callback.Message.MessageId, $"🗑️ *{task.Name}* удалена!", parseMode: ParseMode.Markdown, cancellationToken: ct);
-                    else
-                        await _botClient.SendMessage(registeredUser.TelegramUserId, $"🗑️ *{task.Name}* удалена!", parseMode: ParseMode.Markdown, cancellationToken: ct);
                     await AnswerIfNeeded();
+                    string msg = $"🗑️ *{task.Name}* удалена!";
+                    if (callback.Message != null)
+                        await _botClient.EditMessageText(callback.Message.Chat.Id, callback.Message.MessageId, msg, parseMode: ParseMode.Markdown, cancellationToken: ct);
+                    else
+                        await _botClient.SendMessage(registeredUser.TelegramUserId, msg, parseMode: ParseMode.Markdown, cancellationToken: ct);
                     return;
                 }
             }
 
-            // 🔹 2. Обработка действий со СПИСКАМИ (show, addlist, deletelist)
-            var listDto = ToDoListCallbackDto.FromString(data);
-
+            // 🔹 3. Обработка показа задач СПИСКА с пагинацией
+            var listDto = PagedListCallbackDto.FromString(data);
             if (listDto.Action == "show")
             {
                 var items = await _toDoService.GetByUserIdAndList(registeredUser.UserId, listDto.ToDoListId, ct) ?? Array.Empty<ToDoItem>();
-                string text = items.Count == 0
-                    ? "📭 Список пуст!"
-                    : "📋 Задачи:\n" + string.Join("\n", items.Select((t, i) => $"{i + 1}. {t.Name} - `{t.Id}`"));
 
-                var rows = new List<IEnumerable<InlineKeyboardButton>>();
+                // Формируем кнопки задач
+                var taskButtons = new List<KeyValuePair<string, string>>();
                 foreach (var item in items)
                 {
-                    // ✅ КЛЮЧЕВОЕ: в callbackData пишем ToDoItemCallbackDto с Action = "showtask"
-                    var dto = new ToDoItemCallbackDto { Action = "showtask", ToDoItemId = item.Id };
-                    var cb = SafeCallback(dto.ToString(), dto.Action, item.Id);
-                    rows.Add(new[] { InlineKeyboardButton.WithCallbackData(item.Name, cb) });
+                    var taskDto = new ToDoItemCallbackDto { Action = "showtask", ToDoItemId = item.Id };
+                    var cb = SafeCallback(taskDto.Action, item.Id);
+                    taskButtons.Add(new KeyValuePair<string, string>(item.Name, cb));
                 }
-                var backDto = new ToDoItemCallbackDto { Action = "back" };
-                rows.Add(new[] { InlineKeyboardButton.WithCallbackData("◀️ Назад", backDto.ToString()) });
 
-                var markup = new InlineKeyboardMarkup(rows);
+                string text = items.Count == 0
+                    ? "📭 Список пуст!"
+                    : $"📋 Задачи (стр. {listDto.Page + 1}):";
+
+                var markup = BuildPagedButtons(taskButtons.AsReadOnly(), listDto);
+
                 if (callback.Message != null)
-                    await _botClient.EditMessageText(callback.Message.Chat.Id, callback.Message.MessageId, text, replyMarkup: markup, parseMode: ParseMode.Markdown, cancellationToken: ct);
+                    await _botClient.EditMessageText(
+                        callback.Message.Chat.Id,
+                        callback.Message.MessageId,
+                        text,
+                        replyMarkup: markup,
+                        parseMode: ParseMode.Markdown,
+                        cancellationToken: ct);
                 else
-                    await _botClient.SendMessage(registeredUser.TelegramUserId, text, replyMarkup: markup, parseMode: ParseMode.Markdown, cancellationToken: ct);
+                    await _botClient.SendMessage(
+                        registeredUser.TelegramUserId,
+                        text,
+                        replyMarkup: markup,
+                        parseMode: ParseMode.Markdown,
+                        cancellationToken: ct);
 
                 await AnswerIfNeeded();
                 return;
             }
 
+            // 🔹 4. Обработка addlist / deletelist
             if (data == "addlist")
             {
                 var ctx = new ScenarioContext(ScenarioType.AddList);
@@ -686,12 +634,97 @@ namespace InteractiveСonsole
             await AnswerIfNeeded();
         }
 
-        // ✅ Вспомогательный метод для безопасного сокращения callback_data до 64 символов
-        private string SafeCallback(string callback, string action, Guid id)
+
+        /// <summary>
+        /// Показывает меню выбора списков (без пагинации)
+        /// </summary>
+        private async Task ShowListsMenuAsync(ToDoUser registeredUser, CallbackQuery callback, CancellationToken ct)
         {
-            if (callback.Length <= 64) return callback;
-            return $"{action}|{id.ToString("N")}"; // 32 символа без дефисов
+            var lists = await _toDoListService.GetUserLists(registeredUser.UserId, ct) ?? Array.Empty<ToDoList>();
+            var rows = new List<IEnumerable<InlineKeyboardButton>>();
+
+            // Кнопка "📌Без списка"
+            var noListDto = new ToDoListCallbackDto { Action = "show", ToDoListId = null };
+            rows.Add(new[] { InlineKeyboardButton.WithCallbackData("📌Без списка", noListDto.ToString()) });
+
+            // Кнопки списков
+            foreach (var l in lists)
+            {
+                var dto = new ToDoListCallbackDto { Action = "show", ToDoListId = l.Id };
+                var cb = dto.ToString();
+                if (cb.Length > 64) cb = $"show|{l.Id.ToString("N")}";
+                rows.Add(new[] { InlineKeyboardButton.WithCallbackData(l.Name, cb) });
+            }
+
+            // Системные кнопки
+            rows.Add(new[] { InlineKeyboardButton.WithCallbackData("🆕Добавить", "addlist") });
+            rows.Add(new[] { InlineKeyboardButton.WithCallbackData("❌Удалить", "deletelist") });
+
+            var markup = new InlineKeyboardMarkup(rows);
+
+            // ✅ Используем callback.Message, а не _update.Message
+            if (callback.Message != null)
+                await _botClient.EditMessageText(
+                    callback.Message.Chat.Id,
+                    callback.Message.MessageId,
+                    "Выберите список",
+                    replyMarkup: markup,
+                    cancellationToken: ct);
+            else
+                await _botClient.SendMessage(
+                    registeredUser.TelegramUserId,
+                    "Выберите список",
+                    replyMarkup: markup,
+                    cancellationToken: ct);
         }
+
+
+
+        // Вспомогательный метод для сокращения callback_data до 64 символов
+        private string SafeCallback(string action, Guid id)
+        {
+            var full = $"{action}|{id}";
+            return full.Length <= 64 ? full : $"{action}|{id.ToString("N")}";
+        }
+
+        // Метод для построения пагинированной клавиатуры задач
+        private InlineKeyboardMarkup BuildPagedButtons(
+            IReadOnlyList<KeyValuePair<string, string>> taskButtons,
+            PagedListCallbackDto listDto)
+        {
+            int totalPages = taskButtons.Count == 0 ? 1 : (int)Math.Ceiling(taskButtons.Count / (double)_pageSize);
+            var pageItems = taskButtons.GetBatchByNumber(_pageSize, listDto.Page).ToList();
+
+            var rows = new List<IEnumerable<InlineKeyboardButton>>();
+
+            // Кнопки задач текущей страницы
+            foreach (var item in pageItems)
+                rows.Add(new[] { InlineKeyboardButton.WithCallbackData(item.Key, item.Value) });
+
+            // Навигация: Назад к спискам + стрелки страниц
+            var navRow = new List<InlineKeyboardButton>();
+
+            // Кнопка "◀️ К спискам"
+            navRow.Add(InlineKeyboardButton.WithCallbackData("◀️ К спискам", "back|lists"));
+
+            // Стрелки пагинации
+            if (listDto.Page > 0)
+            {
+                var prev = new PagedListCallbackDto(listDto.Action, listDto.ToDoListId, listDto.Page - 1);
+                navRow.Add(InlineKeyboardButton.WithCallbackData("⬅️", prev.ToString()));
+            }
+            if (listDto.Page < totalPages - 1)
+            {
+                var next = new PagedListCallbackDto(listDto.Action, listDto.ToDoListId, listDto.Page + 1);
+                navRow.Add(InlineKeyboardButton.WithCallbackData("➡️", next.ToString()));
+            }
+
+            if (navRow.Count > 0)
+                rows.Add(navRow);
+
+            return new InlineKeyboardMarkup(rows);
+        }
+
 
 
         string Help { get; set; } = "Просто вводи команды\n/start, /help, /info, /exit.\nЕсли авторизовался, то вводи команду /addtask, /show (вывод списка задач), /remowetask (фрмат ввода '№ задачи'), /completetask (фрмат ввода 'команда id задачи'), /find (вводи часть задачи и получай список задач начинающийся на данное слово), /report (вывод статистики), /cansel (выход из цикла добавления задачи)\nУдачи!!!!!";
