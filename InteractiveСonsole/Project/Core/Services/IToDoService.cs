@@ -9,16 +9,12 @@ namespace InteractiveСonsole
 {
     public interface IToDoService
     {
-        Task<IReadOnlyList<ToDoItem>> GetAllByUserId(Guid userId);
-        Task<IReadOnlyList<ToDoItem>> GetActiveByUserId(Guid userId);
-        Task<ToDoItem> Add(ToDoUser user, string name, DateTime deadline);
-        Task MarkCompleted(Guid id);
-        Task Delete (Guid id);
-        Task<IReadOnlyList<ToDoItem>> Find(ToDoUser user, string namePrefix);
-
-        Task<(int maxtasks, int maxline)> LineTasks();
-
-        public int maxtasks { get; set; }
-        public int maxline { get; set; }
+        Task<IReadOnlyList<ToDoItem>> GetAllByUserId(Guid userId, CancellationToken ct);
+        Task<IReadOnlyList<ToDoItem>> GetActiveByUserId(Guid userId, CancellationToken ct);
+        Task<ToDoItem> Add(ToDoUser user, string name, DateTime deadline, ToDoList? list, CancellationToken ct);
+        Task MarkCompleted(Guid id, CancellationToken ct);
+        Task Delete(Guid id, CancellationToken ct);
+        Task<IReadOnlyList<ToDoItem>> Find(ToDoUser user, string namePrefix, CancellationToken ct);
+        Task<IReadOnlyList<ToDoItem>> GetByUserIdAndList(Guid userId, Guid? listId, CancellationToken ct);
     }
 }
