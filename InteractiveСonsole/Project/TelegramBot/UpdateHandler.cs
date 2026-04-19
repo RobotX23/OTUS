@@ -183,8 +183,6 @@ namespace InteractiveСonsole
                     new BotCommand{ Command = "exit", Description = "Выход из сессии"},
                     new BotCommand{ Command = "addtask", Description = "Добавить задачу"},
                     new BotCommand{ Command = "show", Description = "Вывести задачи"},
-                    new BotCommand{ Command = "remowetask", Description = "Удалить задачу"},
-                    new BotCommand{ Command = "completetask", Description = "Закрыть задачу"},
                     new BotCommand{ Command = "find", Description = "Поиск задачи по слову"},
                     new BotCommand{ Command = "report", Description = "Отчет статистики"},
                     new BotCommand{ Command = "cansel", Description = "выход из цикла добавления задачи"}
@@ -796,8 +794,8 @@ namespace InteractiveСonsole
 
 
 
-        string Help { get; set; } = "Просто вводи команды\n/start, /help, /info, /exit.\nЕсли авторизовался, то вводи команду /addtask, /show (вывод списка задач), /remowetask (фрмат ввода '№ задачи'), /completetask (фрмат ввода 'команда id задачи'), /find (вводи часть задачи и получай список задач начинающийся на данное слово), /report (вывод статистики), /cansel (выход из цикла добавления задачи)\nУдачи!!!!!";
-            string Info { get; set; } = "Версия: 2\nДата создания: 14.11.2025\nДата обновления: 30.03.2026";
+        string Help { get; set; } = "Просто вводи команды\n/start, /help, /info, /exit.\nЕсли авторизовался, то вводи команду /addtask, /show (вывод списка задач), /find (вводи часть задачи и получай список задач начинающийся на данное слово), /report (вывод статистики), /cansel (выход из цикла добавления задачи)\nУдачи!!!!!";
+            string Info { get; set; } = "Версия: 4\nДата создания: 14.11.2025\nДата обновления: 19.04.2026";
 
         }
     }
