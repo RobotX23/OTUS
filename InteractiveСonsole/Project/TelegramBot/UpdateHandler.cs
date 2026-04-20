@@ -499,6 +499,101 @@ namespace InteractiveСonsole
                 return;
             }
 
+
+
+            // 🔹 3. Обработка показа задач СПИСКА с пагинацией
+            var listDto = PagedListCallbackDto.FromString(data);
+            if (listDto.Action == "show")
+            {
+                var items = await _toDoService.GetByUserIdAndList(registeredUser.UserId, listDto.ToDoListId, ct) ?? Array.Empty<ToDoItem>();
+
+                var itemsActev = items.Where(x => x.State == ToDoItemState.Active);
+
+
+                // Формируем кнопки задач
+                var taskButtons = new List<KeyValuePair<string, string>>();
+                foreach (var item in itemsActev)
+                {
+                    var taskDto = new ToDoItemCallbackDto { Action = "showtask", ToDoItemId = item.Id };
+                    var cb = SafeCallback(taskDto.Action, item.Id);
+                    taskButtons.Add(new KeyValuePair<string, string>(item.Name, cb));
+                }
+
+                string text = itemsActev.Count() == 0
+                    ? "📭 Список пуст!"
+                    : $"📋 Задачи (стр. {listDto.Page + 1}):";
+
+                var markup = BuildPagedButtons(taskButtons.AsReadOnly(), listDto);
+
+                if (callback.Message != null)
+                    await _botClient.EditMessageText(
+                        callback.Message.Chat.Id,
+                        callback.Message.MessageId,
+                        text,
+                        replyMarkup: markup,
+                        parseMode: ParseMode.Markdown,
+                        cancellationToken: ct);
+                else
+                    await _botClient.SendMessage(
+                        registeredUser.TelegramUserId,
+                        text,
+                        replyMarkup: markup,
+                        parseMode: ParseMode.Markdown,
+                        cancellationToken: ct);
+
+                await AnswerIfNeeded();
+                return;
+            }
+
+            if (listDto.Action == "show_completed")
+            {
+                var items = await _toDoService.GetByUserIdAndList(registeredUser.UserId, listDto.ToDoListId, ct) ?? Array.Empty<ToDoItem>();
+
+                var itemsActev = items.Where(x => x.State == ToDoItemState.Completed);
+
+
+                // Формируем кнопки задач
+                var taskButtons = new List<KeyValuePair<string, string>>();
+                foreach (var item in itemsActev)
+                {
+                    var taskDto = new ToDoItemCallbackDto { Action = "showtask", ToDoItemId = item.Id };
+                    var cb = SafeCallback(taskDto.Action, item.Id);
+                    taskButtons.Add(new KeyValuePair<string, string>(item.Name, cb));
+                }
+
+                string text = itemsActev.Count() == 0
+                    ? "📭 Список пуст!"
+                    : $"✅ Выполненные (стр. {listDto.Page + 1}):";
+
+                var markup = BuildPagedButtons(taskButtons.AsReadOnly(), listDto);
+
+                if (callback.Message != null)
+                    await _botClient.EditMessageText(
+                        callback.Message.Chat.Id,
+                        callback.Message.MessageId,
+                        text,
+                        replyMarkup: markup,
+                        parseMode: ParseMode.Markdown,
+                        cancellationToken: ct);
+                else
+                    await _botClient.SendMessage(
+                        registeredUser.TelegramUserId,
+                        text,
+                        replyMarkup: markup,
+                        parseMode: ParseMode.Markdown,
+                        cancellationToken: ct);
+
+                await AnswerIfNeeded();
+                return;
+            }
+
+
+
+
+
+
+
+
             // 🔹 2. Обработка действий с ЗАДАЧАМИ (showtask, completetask, deletetask)
             var itemDto = ToDoItemCallbackDto.FromString(data);
             if (!string.IsNullOrEmpty(itemDto.Action) && itemDto.ToDoItemId.HasValue)
@@ -566,93 +661,9 @@ namespace InteractiveСonsole
 
                 }
 
-                // 🔹 3. Обработка показа задач СПИСКА с пагинацией
-                var listDto = PagedListCallbackDto.FromString(data);
-                if (listDto.Action == "show")
-                {
-                    var items = await _toDoService.GetByUserIdAndList(registeredUser.UserId, listDto.ToDoListId, ct) ?? Array.Empty<ToDoItem>();
-
-                    var itemsActev = items.Where(x => x.State == ToDoItemState.Active);
 
 
-                    // Формируем кнопки задач
-                    var taskButtons = new List<KeyValuePair<string, string>>();
-                    foreach (var item in itemsActev)
-                    {
-                        var taskDto = new ToDoItemCallbackDto { Action = "showtask", ToDoItemId = item.Id };
-                        var cb = SafeCallback(taskDto.Action, item.Id);
-                        taskButtons.Add(new KeyValuePair<string, string>(item.Name, cb));
-                    }
-
-                    string text = itemsActev.Count() == 0
-                        ? "📭 Список пуст!"
-                        : $"📋 Задачи (стр. {listDto.Page + 1}):";
-
-                    var markup = BuildPagedButtons(taskButtons.AsReadOnly(), listDto);
-
-                    if (callback.Message != null)
-                        await _botClient.EditMessageText(
-                            callback.Message.Chat.Id,
-                            callback.Message.MessageId,
-                            text,
-                            replyMarkup: markup,
-                            parseMode: ParseMode.Markdown,
-                            cancellationToken: ct);
-                    else
-                        await _botClient.SendMessage(
-                            registeredUser.TelegramUserId,
-                            text,
-                            replyMarkup: markup,
-                            parseMode: ParseMode.Markdown,
-                            cancellationToken: ct);
-
-                    await AnswerIfNeeded();
-                    return;
-                }
-
-                if (listDto.Action == "show_completed")
-                {
-                    var items = await _toDoService.GetByUserIdAndList(registeredUser.UserId, listDto.ToDoListId, ct) ?? Array.Empty<ToDoItem>();
-
-                    var itemsActev = items.Where(x => x.State == ToDoItemState.Completed);
-
-
-                    // Формируем кнопки задач
-                    var taskButtons = new List<KeyValuePair<string, string>>();
-                    foreach (var item in itemsActev)
-                    {
-                        var taskDto = new ToDoItemCallbackDto { Action = "showtask", ToDoItemId = item.Id };
-                        var cb = SafeCallback(taskDto.Action, item.Id);
-                        taskButtons.Add(new KeyValuePair<string, string>(item.Name, cb));
-                    }
-
-                    string text = itemsActev.Count() == 0
-                        ? "📭 Список пуст!"
-                        : $"✅ Выполненные (стр. {listDto.Page + 1}):";
-
-                    var markup = BuildPagedButtons(taskButtons.AsReadOnly(), listDto);
-
-                    if (callback.Message != null)
-                        await _botClient.EditMessageText(
-                            callback.Message.Chat.Id,
-                            callback.Message.MessageId,
-                            text,
-                            replyMarkup: markup,
-                            parseMode: ParseMode.Markdown,
-                            cancellationToken: ct);
-                    else
-                        await _botClient.SendMessage(
-                            registeredUser.TelegramUserId,
-                            text,
-                            replyMarkup: markup,
-                            parseMode: ParseMode.Markdown,
-                            cancellationToken: ct);
-
-                    await AnswerIfNeeded();
-                    return;
-                }
-
-
+            }
 
 
 
@@ -669,7 +680,7 @@ namespace InteractiveСonsole
                     return;
                 }
 
-                if (listDto.Action == "deletelist")
+                if (data == "deletelist")
                 {
                     var ctx = await _scenarioContextRepository.GetContext(registeredUser.TelegramUserId, ct);
                     if (ctx == null || ctx.CurrentScenario != ScenarioType.DeleteList)
@@ -685,7 +696,7 @@ namespace InteractiveСonsole
 
                 await AnswerIfNeeded();
             }
-        }
+        
 
 
         /// <summary>
