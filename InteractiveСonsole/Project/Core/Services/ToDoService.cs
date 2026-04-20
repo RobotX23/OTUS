@@ -103,5 +103,10 @@ namespace InteractiveСonsole
 
             return items.Where(i => i.List != null && i.List.Id == listId).ToList();
         }
+
+        public async Task<ToDoItem?> Get(Guid toDoItemId, CancellationToken ct)
+        {
+            return await _toDoRepository.Get(toDoItemId);
+        }
     }
 }

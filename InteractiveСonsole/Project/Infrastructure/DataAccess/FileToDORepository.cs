@@ -149,7 +149,7 @@ namespace InteractiveСonsole.Project.Infrastructure.DataAccess
                 string jsonString = await File.ReadAllTextAsync(filePathUserId, ct);
                 var inddex = JsonSerializer.Deserialize<Dictionary<Guid, Guid>>(jsonString);
 
-                var userId = inddex[id];
+                if (!inddex.TryGetValue(id, out var userId)) return;
                 string file = $"{_baseFolder}//{userId}//{id}.json";
 
                 if (file.Length > 0)
@@ -186,24 +186,23 @@ namespace InteractiveСonsole.Project.Infrastructure.DataAccess
         public async Task<ToDoItem?> Get(Guid id, CancellationToken ct = default)
         {
             var filePathUserId = Index();
+            if (!File.Exists(filePathUserId)) return null;
 
-            if (File.Exists(filePathUserId))
-            {
-                string jsonString = await File.ReadAllTextAsync(filePathUserId, ct);
-                var inddex = JsonSerializer.Deserialize<Dictionary<Guid, Guid>>(jsonString);
+            string jsonString = await File.ReadAllTextAsync(filePathUserId, ct);
+            if (string.IsNullOrWhiteSpace(jsonString)) return null;
 
-                var userId = inddex[id];
-                var file = $"{_baseFolder}//{userId}//{id}.json";
+            var inddex = JsonSerializer.Deserialize<Dictionary<Guid, Guid>>(jsonString);
+            if (inddex == null) return null;
 
-                using (var stream = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, useAsync: true))
-                {
-                    return await JsonSerializer.DeserializeAsync<ToDoItem>(stream, cancellationToken: ct);
-                }
-            }
-            else
-            {
+            // ✅ ЗАМЕНА: TryGetValue вместо inddex[id] — предотвращает KeyNotFoundException
+            if (!inddex.TryGetValue(id, out var userId))
                 return null;
-            }
+
+            var file = Path.Combine(_baseFolder, userId.ToString(), $"{id}.json");
+            if (!File.Exists(file)) return null;
+
+            using var stream = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, useAsync: true);
+            return await JsonSerializer.DeserializeAsync<ToDoItem>(stream, cancellationToken: ct);
         }
         /// <summary>
         /// Вывод активных задач пользователя

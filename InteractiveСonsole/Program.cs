@@ -31,7 +31,8 @@ try
     {
         new AddTaskScenario(userService, toDoService, toDoListServace),
         new AddListScenario(userService, toDoListServace),
-        new DeleteListScenario(userService, toDoListServace, toDoService,scenarioRepository)
+        new DeleteListScenario(userService, toDoListServace, toDoService,scenarioRepository),
+        new DeleteTaskScenario(userService, toDoService,scenarioRepository)
     };
 
 
