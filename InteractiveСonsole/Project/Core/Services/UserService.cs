@@ -1,43 +1,32 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
-using System.Xml.Linq;
 
 namespace InteractiveСonsole
 {
     internal class UserService : IUserService
     {
         private readonly IUserRepository _userRepository;
+        public UserService(IUserRepository userRepository)
+            => _userRepository = userRepository ?? throw new ArgumentNullException(nameof(userRepository));
 
-        public UserService(IUserRepository userRepository) 
-        {
-            _userRepository = userRepository ?? throw new ArgumentException(nameof(userRepository));
-        }
-        /// <summary>
-        /// Поиск существующего пользователя
-        /// </summary>
         public async Task<ToDoUser?> GetUser(long telegramUserId, CancellationToken ct = default)
-        {
-            return await _userRepository.GetUserByTelegramUserId(telegramUserId, ct);
-        }
-        /// <summary>
-        /// Регистрация пользователя
-        /// </summary>
-        public async Task<ToDoUser> RegisterUser(long telegramUserId, string telegrsmUserName, CancellationToken ct = default)
-        {
-            var existingUser = await _userRepository.GetUserByTelegramUserId(telegramUserId, ct);
-            if (existingUser != null)
-            {
-                return  existingUser;
-            }
+            => await _userRepository.GetUserByTelegramUserId(telegramUserId, ct);
 
-            var user = new ToDoUser();
-            user.ToDoUserNew(telegrsmUserName, telegramUserId);
+        public async Task<ToDoUser> RegisterUser(long telegramUserId, string? telegramUserName, CancellationToken ct = default)
+        {
+            var existing = await GetUser(telegramUserId, ct);
+            if (existing != null) return existing;
+
+            var user = new ToDoUser
+            {
+                UserId = Guid.NewGuid(),
+                TelegramUserId = telegramUserId,
+                TelegramUserName = telegramUserName,
+                RegistereAt = DateTime.UtcNow
+            };
             await _userRepository.Add(user, ct);
             return user;
-
         }
     }
 }

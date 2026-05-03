@@ -1,16 +1,14 @@
+using InteractiveСonsole;
 using InteractiveСonsole.Project.Core.DataAccess.Models;
 
 namespace InteractiveСonsole.Project.Infrastructure.DataAccess;
 
-/// <summary>
-/// Статический класс для маппинга между доменными сущностями и моделями для работы с БД
-/// </summary>
 internal static class ModelMapper
 {
+    // ==================== USER ====================
     public static ToDoUser MapFromModel(ToDoUserModel model)
     {
         if (model == null) return null!;
-
         return new ToDoUser
         {
             UserId = model.UserId,
@@ -23,7 +21,6 @@ internal static class ModelMapper
     public static ToDoUserModel MapToModel(ToDoUser entity)
     {
         if (entity == null) return null!;
-
         return new ToDoUserModel
         {
             UserId = entity.UserId,
@@ -33,101 +30,67 @@ internal static class ModelMapper
         };
     }
 
-    public static ToDoItem MapFromModel(ToDoItemModel model)
+    // ==================== LIST ====================
+    public static ToDoList MapFromModel(ToDoListModel model)
     {
         if (model == null) return null!;
-
-        var item = new ToDoItem
+        return new ToDoList
         {
             Id = model.Id,
             UserId = model.UserId,
             Name = model.Name,
             CreateAt = model.CreateAt,
-            State = (ToDoItemState)model.State,
-            StateChangeAt = model.StateChangeAt,
-            Deadline = model.Deadline,
-            ListId = model.ListId
+            User = model.User != null ? MapFromModel(model.User) : null
         };
-
-        if (model.User != null)
-        {
-            item.User = MapFromModel(model.User);
-        }
-
-        if (model.List != null)
-        {
-            item.List = MapFromModel(model.List);
-        }
-
-        return item;
-    }
-
-    public static ToDoItemModel MapToModel(ToDoItem entity)
-    {
-        if (entity == null) return null!;
-
-        var model = new ToDoItemModel
-        {
-            Id = entity.Id,
-            UserId = entity.UserId,
-            Name = entity.Name,
-            CreateAt = entity.CreateAt,
-            State = (Core.DataAccess.Models.ToDoItemState)entity.State,
-            StateChangeAt = entity.StateChangeAt,
-            Deadline = entity.Deadline,
-            ListId = entity.ListId
-        };
-
-        if (entity.User != null)
-        {
-            model.User = MapToModel(entity.User);
-        }
-
-        if (entity.List != null)
-        {
-            model.List = MapToModel(entity.List);
-        }
-
-        return model;
-    }
-
-    public static ToDoList MapFromModel(ToDoListModel model)
-    {
-        if (model == null) return null!;
-
-        var list = new ToDoList
-        {
-            Id = model.Id,
-            UserId = model.UserId,
-            Name = model.Name,
-            CreateAt = model.CreateAt
-        };
-
-        if (model.User != null)
-        {
-            list.User = MapFromModel(model.User);
-        }
-
-        return list;
     }
 
     public static ToDoListModel MapToModel(ToDoList entity)
     {
         if (entity == null) return null!;
-
-        var model = new ToDoListModel
+        return new ToDoListModel
         {
             Id = entity.Id,
             UserId = entity.UserId,
             Name = entity.Name,
-            CreateAt = entity.CreateAt
+            CreateAt = entity.CreateAt,
+            User = entity.User != null ? MapToModel(entity.User) : null
         };
+    }
 
-        if (entity.User != null)
+    // ==================== ITEM ====================
+    public static ToDoItem MapFromModel(ToDoItemModel model)
+    {
+        if (model == null) return null!;
+        return new ToDoItem
         {
-            model.User = MapToModel(entity.User);
-        }
+            Id = model.Id,
+            UserId = model.UserId,
+            Name = model.Name,
+            CreateAt = model.CreateAt,
+            // ✅ Безопасное приведение двух разных enum через int
+            State = (InteractiveСonsole.ToDoItemState)(int)model.State,
+            StateChangeAt = model.StateChangeAt,
+            Deadline = model.Deadline,
+            ListId = model.ListId,
+            User = model.User != null ? MapFromModel(model.User) : null,
+            List = model.List != null ? MapFromModel(model.List) : null
+        };
+    }
 
-        return model;
+    public static ToDoItemModel MapToModel(ToDoItem entity)
+    {
+        if (entity == null) return null!;
+        return new ToDoItemModel
+        {
+            Id = entity.Id,
+            UserId = entity.UserId,
+            Name = entity.Name,
+            CreateAt = entity.CreateAt,
+            State = (Project.Core.DataAccess.Models.ToDoItemState)(int)entity.State,
+            StateChangeAt = entity.StateChangeAt,
+            Deadline = entity.Deadline,
+            ListId = entity.ListId
+            // Навигационные свойства НЕ маппим: linq2db для INSERT/UPDATE использует только FK
+        };
     }
 }

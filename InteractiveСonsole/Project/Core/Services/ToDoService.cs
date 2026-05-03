@@ -37,7 +37,19 @@ namespace InteractiveСonsole
                 throw new DublicateTaskException(name);
             }
 
-            var newTask = new ToDoItem(user, name, deadline, list);
+            var newTask = new ToDoItem
+            {
+                Id = Guid.NewGuid(),
+                UserId = user.UserId,
+                User = user,
+                Name = name,
+                CreateAt = DateTime.UtcNow,
+                State = ToDoItemState.Active,
+                StateChangeAt = null,
+                Deadline = deadline,
+                ListId = list?.Id,
+                List = list
+            };
             await _toDoRepository.Add(newTask, ct);
             return newTask;
         }
@@ -80,7 +92,8 @@ namespace InteractiveСonsole
             var zadacha = await _toDoRepository.Get(id, ct);
             if (zadacha != null)
             {
-                zadacha.ChangeState(ToDoItemState.Completed);
+                zadacha.State = ToDoItemState.Completed;
+                zadacha.StateChangeAt = DateTime.UtcNow; // фиксируем время изменения статуса
                 await _toDoRepository.Update(zadacha, ct);
             }
         }
