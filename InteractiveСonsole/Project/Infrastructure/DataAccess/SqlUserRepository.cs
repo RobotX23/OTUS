@@ -27,7 +27,7 @@ internal class SqlUserRepository : IUserRepository
     public async Task<ToDoUser?> GetUserByTelegramUserId(long telegramUserId, CancellationToken ct = default)
     {
         using var dbContext = _factory.CreateDataContext();
-        var model = await dbContext.ToDoUsers
+        var model = await dbContext.ToDoUsers  
             .FirstOrDefaultAsync(x => x.TelegramUserId == telegramUserId, ct);
 
         return model != null ? ModelMapper.MapFromModel(model) : null;

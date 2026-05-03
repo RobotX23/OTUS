@@ -5,13 +5,13 @@ using InteractiveСonsole.Project.TelegramBot.Scenarios;
 using Telegram.Bot;
 using Telegram.Bot.Polling;
 using Telegram.Bot.Types.Enums;
-using System;
-using System.Collections.Generic;
-using System.Threading;
 
 try
 {
     using var ctr = new CancellationTokenSource();
+
+    var connectionString = Environment.GetEnvironmentVariable("POSTGRES_CONNECTION_STRING", EnvironmentVariableTarget.User);
+
     string token = Environment.GetEnvironmentVariable("TELEGRAM_BOT_TOKEN_EX1", EnvironmentVariableTarget.User);
     if (string.IsNullOrEmpty(token))
     {
@@ -19,10 +19,10 @@ try
         return;
     }
 
-    // Файловые репозитории (как в оригинале)
-    var userRepository = new FileUserRepository();
-    var toDoRepository = new FileToDoRepository();
-    var toDoListRepository = new FileToDoListRepository();
+    var factory = new DataContextFactory(connectionString);
+    var userRepository = new SqlUserRepository(factory);
+    var toDoRepository = new SqlToDoRepository(factory);
+    var toDoListRepository = new SqlToDoListRepository(factory);
 
     var toDoService = new ToDoService(toDoRepository, 50, 100);
     var userService = new UserService(userRepository);
@@ -42,11 +42,11 @@ try
 
     var receiverOptions = new ReceiverOptions
     {
-        AllowedUpdates = [UpdateType.Message, UpdateType.CallbackQuery], // ✅ Исправлено: добавлены колбэки
+        AllowedUpdates = [UpdateType.Message, UpdateType.CallbackQuery],
         DropPendingUpdates = true
     };
 
-    // ✅ Передаём опции и токен отмены
+    
     botClient.StartReceiving(handler, receiverOptions, ctr.Token);
 
     var me = await botClient.GetMe(cancellationToken: ctr.Token);
@@ -72,7 +72,7 @@ catch (Exception ex)
 {
     Console.WriteLine("Произошла непредвиденная ошибка:");
     Console.WriteLine($"Type: {ex.GetType()}");
-    Console.WriteLine($"Message: {ex.Message}"); // ✅ Исправлена опечатка Message6
+    Console.WriteLine($"Message: {ex.Message}"); 
     Console.WriteLine($"StackTrace: {ex.StackTrace}");
     if (ex.InnerException != null)
     {
