@@ -645,7 +645,7 @@ namespace InteractiveСonsole
                 if (itemDto.Action == "deletetask")
                 {
                     // Создаем контекст для сценария удаления
-                    var ctx = new ScenarioContext(ScenarioType.DeleteTask, registeredUser.TelegramUserId);
+                    var ctx = new ScenarioContext(ScenarioType.DeleteTask, callback.From.Id);
                     ctx.Data["taskId"] = itemDto.ToDoItemId.Value; // Передаем ID задачи в сценарий
 
                     await _scenarioContextRepository.SetContext(registeredUser.TelegramUserId, ctx, ct);
