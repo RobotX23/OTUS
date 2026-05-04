@@ -341,7 +341,7 @@ namespace InteractiveСonsole
                             return false;
                         }
                         user2 = registeredUser;
-                        var newContext = new ScenarioContext(ScenarioType.AddTask);
+                        var newContext = new ScenarioContext(ScenarioType.AddTask, _update.Message.From!.Id);
 
                         await _scenarioContextRepository.SetContext(_update.Message.From!.Id, newContext, ct);
 
@@ -645,7 +645,7 @@ namespace InteractiveСonsole
                 if (itemDto.Action == "deletetask")
                 {
                     // Создаем контекст для сценария удаления
-                    var ctx = new ScenarioContext(ScenarioType.DeleteTask);
+                    var ctx = new ScenarioContext(ScenarioType.DeleteTask, registeredUser.TelegramUserId);
                     ctx.Data["taskId"] = itemDto.ToDoItemId.Value; // Передаем ID задачи в сценарий
 
                     await _scenarioContextRepository.SetContext(registeredUser.TelegramUserId, ctx, ct);
@@ -670,7 +670,7 @@ namespace InteractiveСonsole
                 // 🔹 4. Обработка addlist / deletelist
                 if (data == "addlist")
                 {
-                    var ctx = new ScenarioContext(ScenarioType.AddList);
+                    var ctx = new ScenarioContext(ScenarioType.AddList, registeredUser.TelegramUserId);
                     await _scenarioContextRepository.SetContext(registeredUser.TelegramUserId, ctx, ct);
                     if (callback.Message != null)
                         await ProcessScenario(ctx, callback.Message, ct, callback);
@@ -685,7 +685,7 @@ namespace InteractiveСonsole
                     var ctx = await _scenarioContextRepository.GetContext(registeredUser.TelegramUserId, ct);
                     if (ctx == null || ctx.CurrentScenario != ScenarioType.DeleteList)
                     {
-                        ctx = new ScenarioContext(ScenarioType.DeleteList);
+                        ctx = new ScenarioContext(ScenarioType.DeleteList, registeredUser.TelegramUserId);
                         await _scenarioContextRepository.SetContext(registeredUser.TelegramUserId, ctx, ct);
                     }
                     if (callback.Message != null)

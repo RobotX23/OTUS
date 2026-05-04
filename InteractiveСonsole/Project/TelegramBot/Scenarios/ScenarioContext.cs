@@ -1,4 +1,6 @@
-﻿namespace InteractiveСonsole.Project.TelegramBot.Scenarios
+﻿using Telegram.Bot.Types;
+
+namespace InteractiveСonsole.Project.TelegramBot.Scenarios
 {
     internal class ScenarioContext
     {
@@ -6,11 +8,13 @@
         public string? CurretStep { get; set; }
         public Dictionary<string, object> Data { get; set; } = new();
         public DateTime CreatedAt { get; }
+        public long UserId { get; }
 
-        public ScenarioContext(ScenarioType scenario)
+        public ScenarioContext(ScenarioType scenario, long userId)
         {
             CurrentScenario = scenario;
             CreatedAt = DateTime.UtcNow;
+            UserId = userId;
         }
 
         public void SetData(string key, object? value)
