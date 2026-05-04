@@ -5,10 +5,12 @@
         public ScenarioType CurrentScenario { get; set; }
         public string? CurretStep { get; set; }
         public Dictionary<string, object> Data { get; set; } = new();
+        public DateTime CreatedAt { get; }
 
         public ScenarioContext(ScenarioType scenario)
         {
             CurrentScenario = scenario;
+            CreatedAt = DateTime.UtcNow;
         }
 
         public void SetData(string key, object? value)
