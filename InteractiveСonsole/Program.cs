@@ -48,9 +48,16 @@ try
         scenarioRepository,
         botClient));
 
+    var notificationService = new NotificationService(factory);
+
     backgroundTaskRunner.AddTask(new NotificationBackgroundTask(
     new NotificationService(factory), 
     botClient));
+
+    backgroundTaskRunner.AddTask(new DeadlineBackgroundTask(
+    notificationService,  // или создайте через фабрику
+    userRepository,
+    toDoRepository));
 
     backgroundTaskRunner.StartTasks(ctr.Token);
 
