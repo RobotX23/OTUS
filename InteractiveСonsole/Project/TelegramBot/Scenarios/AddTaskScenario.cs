@@ -19,7 +19,7 @@ namespace InteractiveСonsole.Project.TelegramBot.Scenarios
         public AddTaskScenario(IUserService userService, IToDoService todoService, IToDoListService toDoListService)
         {
             _userService = userService;
-            _todoService = todoService;
+            _todoService = todoService; 
             _todoListService = toDoListService;
         }
 
@@ -107,47 +107,35 @@ namespace InteractiveСonsole.Project.TelegramBot.Scenarios
                     context.CurretStep = "SelectList";
                     return ScenarioResult.Transition;
 
-                case "SelectList": // Пользователь вводит название нового списка
+                case "SelectList":
                     if (message != null)
                     {
-                        if (message.Text == "Назад")
-                            return ScenarioResult.Completed;
+                        if (message.Text == "Назад ") return ScenarioResult.Completed;
                     }
-                    
+
                     var data = callbackQuery.Data ?? string.Empty;
                     var dto = ToDoListCallbackDto.FromString(data);
+                    var listId = dto.ToDoListId; // ✅ Исправлено: было listName
 
-
-                    var listName = dto.ToDoListId;
-
-
-                    if (listName == null)
+                    if (listId == null)
                     {
                         await TaskAdd(context, bot, callbackQuery, ct, null);
                         return ScenarioResult.Completed;
                     }
                     else
                     {
-
-                        var name = _todoListService.Get((Guid)listName, ct).Result;
-
-
-                        if (string.IsNullOrWhiteSpace(name.Name))
+                        var list = await _todoListService.Get((Guid)listId, ct); // ✅ Исправлено: await вместо .Result, тип ToDoList?
+                        if (list == null || string.IsNullOrWhiteSpace(list.Name))
                         {
-                            await bot.SendMessage(message.Chat.Id, "Название списка не может быть пустым. Попробуйте ещё раз:", cancellationToken: ct);
+                            await bot.SendMessage(message.Chat.Id, "Название списка не может быть пустым. Попробуйте ещё раз: ", cancellationToken: ct);
                             return ScenarioResult.Transition;
                         }
                         var user3 = (ToDoUser)context.Data["user"];
-                        // Создаём список через сервис
-                        ToDoList newList = new ToDoList(name.User, name.Name);
-                        newList.Id = name.Id;
-                        newList.CreateAt = name.CreateAt;
-
-                        await TaskAdd(context, bot, callbackQuery, ct, newList);
+                        await TaskAdd(context, bot, callbackQuery, ct, list);
                         return ScenarioResult.Completed;
                     }
 
-                    
+
 
                 default:
                     await bot.SendMessage(message.Chat.Id, "Неподдерживаемый шаг сценария.", cancellationToken: ct);

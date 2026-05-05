@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Telegram.Bot.Types;
 
 namespace InteractiveСonsole.Project.Core.Services
 {
@@ -23,7 +24,15 @@ namespace InteractiveСonsole.Project.Core.Services
             if (await _repo.ExistsByName(user.UserId, name, ct))
                 throw new InvalidOperationException("У пользователя уже есть список с таким имененм.");
 
-            var list = new ToDoList(user, name);
+            var list = new ToDoList
+            {
+                Id = Guid.NewGuid(),
+                UserId = user.UserId,
+                User = user,
+                Name = name,
+                CreateAt = DateTime.UtcNow
+            }
+            ;
 
             await _repo.Add(list, ct);
             return list;
