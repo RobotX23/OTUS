@@ -1,11 +1,12 @@
 ﻿using InteractiveСonsole;
+using InteractiveСonsole.Project.BackgroundTasks;
 using InteractiveСonsole.Project.Core.Services;
 using InteractiveСonsole.Project.Infrastructure.DataAccess;
+using InteractiveСonsole.Project.Infrastructure.Services;
 using InteractiveСonsole.Project.TelegramBot.Scenarios;
 using Telegram.Bot;
 using Telegram.Bot.Polling;
 using Telegram.Bot.Types.Enums;
-using InteractiveСonsole.Project.BackgroundTasks;
 
 try
 {
@@ -46,6 +47,10 @@ try
         TimeSpan.FromHours(1),   
         scenarioRepository,
         botClient));
+
+    backgroundTaskRunner.AddTask(new NotificationBackgroundTask(
+    new NotificationService(factory), 
+    botClient));
 
     backgroundTaskRunner.StartTasks(ctr.Token);
 
