@@ -59,6 +59,11 @@ try
     userRepository,
     toDoRepository));
 
+    backgroundTaskRunner.AddTask(new TodayBackgroundTask(
+    notificationService,
+    userRepository,
+    toDoRepository));
+
     backgroundTaskRunner.StartTasks(ctr.Token);
 
     var receiverOptions = new ReceiverOptions
