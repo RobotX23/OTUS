@@ -12,6 +12,11 @@ namespace InteractiveСonsole.Project.TelegramBot.Scenarios
             return Task.FromResult(context);
         }
 
+        public Task<IReadOnlyList<ScenarioContext>> GetContexts(CancellationToken ct)
+        {
+            return Task.FromResult<IReadOnlyList<ScenarioContext>>(_storege.Values.ToList().AsReadOnly());
+        }
+
         public Task ResetContext(long userId, CancellationToken ct)
         {
             _storege.TryRemove(userId, out _);

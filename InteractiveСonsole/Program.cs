@@ -5,6 +5,7 @@ using InteractiveСonsole.Project.TelegramBot.Scenarios;
 using Telegram.Bot;
 using Telegram.Bot.Polling;
 using Telegram.Bot.Types.Enums;
+using InteractiveСonsole.Project.BackgroundTasks;
 
 try
 {
@@ -40,6 +41,14 @@ try
 
     var handler = new UpdateHandler(toDoService, userService, toDoRepository, botClient, scenarios, scenarioRepository, toDoListServace);
 
+    var backgroundTaskRunner = new BackgroundTaskRunner();
+    backgroundTaskRunner.AddTask(new ResetScenarioBackgroundTask(
+        TimeSpan.FromHours(1),   
+        scenarioRepository,
+        botClient));
+
+    backgroundTaskRunner.StartTasks(ctr.Token);
+
     var receiverOptions = new ReceiverOptions
     {
         AllowedUpdates = [UpdateType.Message, UpdateType.CallbackQuery],
@@ -59,6 +68,7 @@ try
         if (key == ConsoleKey.A)
         {
             Console.WriteLine("Выход из программы...");
+            await backgroundTaskRunner.StopTasks(CancellationToken.None);
             ctr.Cancel();
             break;
         }
