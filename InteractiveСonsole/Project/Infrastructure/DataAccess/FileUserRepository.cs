@@ -65,5 +65,25 @@ namespace InteractiveСonsole.Project.Infrastructure.DataAccess
             return user;
 
         }
+
+        public async Task<IReadOnlyList<ToDoUser>> GetUsers(CancellationToken ct)
+        {
+            var files = Directory.GetFiles(_baseFolder, "*.json");
+            var users = new List<ToDoUser>();
+
+            foreach (var file in files)
+            {
+                ct.ThrowIfCancellationRequested();
+
+                var userId = Guid.Parse(Path.GetFileNameWithoutExtension(file));
+                var user = await GetUser(userId, ct);
+
+                if (user != null)
+                    users.Add(user);
+            }
+
+            return users.AsReadOnly();
+        }
+
     }
 }

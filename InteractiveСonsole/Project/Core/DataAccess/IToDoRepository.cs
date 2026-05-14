@@ -20,6 +20,7 @@ namespace InteractiveСonsole
         //Возвращает количество активных задач у пользователя
         Task<int> CountActive(Guid userId, CancellationToken ct = default);
         Task<IReadOnlyList<ToDoItem>> Find(Guid userId, Func<ToDoItem, bool> predicate, CancellationToken ct = default);
+        Task<IReadOnlyList<ToDoItem>> GetActiveWithDeadline(Guid userId, DateTime from, DateTime to, CancellationToken ct);
 
     }
 }

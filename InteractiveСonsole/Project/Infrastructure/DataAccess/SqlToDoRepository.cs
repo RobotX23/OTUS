@@ -97,4 +97,19 @@ internal class SqlToDoRepository : IToDoRepository
         var allItems = await GetAllByUserId(userId, ct);
         return allItems.Where(predicate).ToList().AsReadOnly();
     }
+
+    public async Task<IReadOnlyList<ToDoItem>> GetActiveWithDeadline(Guid userId, DateTime from, DateTime to, CancellationToken ct)
+    {
+        using var dbContext = _factory.CreateDataContext();
+
+        var models = await dbContext.ToDoItems
+            .Where(x => x.UserId == userId
+                && x.State == 0
+                && x.Deadline >= from
+                && x.Deadline < to)
+            .LoadWith(x => x.User)
+            .ToListAsync(ct);
+
+        return models.Select(ModelMapper.MapFromModel).ToList().AsReadOnly();
+    }
 }

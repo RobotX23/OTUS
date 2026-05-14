@@ -245,5 +245,20 @@ namespace InteractiveСonsole.Project.Infrastructure.DataAccess
                 await JsonSerializer.SerializeAsync(stream, item, cancellationToken: ct);
             }
         }
+
+        public async Task<IReadOnlyList<ToDoItem>> GetActiveWithDeadline(Guid userId, DateTime from, DateTime to,  CancellationToken ct)
+        {
+            // Получаем все задачи пользователя
+            var allItems = await GetAllByUserId(userId, ct);
+
+            // Фильтруем: активные + дедлайн в нужном диапазоне
+            var filtered = allItems
+                .Where(x => x.State == ToDoItemState.Active
+                    && x.Deadline >= from
+                    && x.Deadline < to)
+                .ToList();
+
+            return filtered.AsReadOnly();
+        }
     }
 }

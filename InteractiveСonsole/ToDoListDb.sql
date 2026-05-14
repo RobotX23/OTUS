@@ -40,6 +40,21 @@ CREATE TABLE IF NOT EXISTS "ToDoItems" (
 );
 
 
+-- 4. Таблица уведомлений (Notifications)
+CREATE TABLE IF NOT EXISTS "Notifications" (
+    "Id" UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    "UserId" UUID NOT NULL,
+    "Type" TEXT NOT NULL,
+    "Text" TEXT NOT NULL,
+    "ScheduledAt" TIMESTAMPTZ NOT NULL,
+    "IsNotified" BOOLEAN NOT NULL DEFAULT FALSE,
+    "NotifiedAt" TIMESTAMPTZ,
+
+    CONSTRAINT "FK_Notifications_ToDoUsers" 
+        FOREIGN KEY ("UserId") REFERENCES "ToDoUsers"("UserId") ON DELETE CASCADE
+);
+
+
 -- Уникальный индекс для TelegramUserId (гарантирует 1 аккаунт Telegram = 1 пользователь)
 CREATE UNIQUE INDEX IF NOT EXISTS "UX_ToDoUsers_TelegramUserId" ON "ToDoUsers"("TelegramUserId");
 
@@ -47,6 +62,11 @@ CREATE UNIQUE INDEX IF NOT EXISTS "UX_ToDoUsers_TelegramUserId" ON "ToDoUsers"("
 CREATE INDEX IF NOT EXISTS "IX_ToDoLists_UserId" ON "ToDoLists"("UserId");
 CREATE INDEX IF NOT EXISTS "IX_ToDoItems_UserId" ON "ToDoItems"("UserId");
 CREATE INDEX IF NOT EXISTS "IX_ToDoItems_ListId" ON "ToDoItems"("ListId");
+CREATE INDEX IF NOT EXISTS "IX_Notifications_UserId" ON "Notifications"("UserId");
 
 -- Индекс для быстрой фильтрации по статусу (Active / Completed)
 CREATE INDEX IF NOT EXISTS "IX_ToDoItems_State" ON "ToDoItems"("State");
+
+CREATE INDEX IF NOT EXISTS "IX_Notifications_ScheduledAt_IsNotified" 
+    ON "Notifications"("ScheduledAt", "IsNotified") 
+    WHERE "IsNotified" = FALSE;
